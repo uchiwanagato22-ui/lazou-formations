@@ -1,0 +1,103 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function connecte() { return request.auth != null; }
+    function role() { return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role; }
+    function admin() { return connecte() && role() == 'admin'; }
+    function formateur() { return connecte() && role() == 'formateur'; }
+    function caissier() { return connecte() && role() == 'caissier'; }
+    function etudiant() { return connecte() && role() == 'etudiant'; }
+    function monProfil() { return get(/databases/$(database)/documents/users/$(request.auth.uid)).data; }
+    function monGroupe(groupeId) { return connecte() && monProfil().get('groupeId', '') == groupeId; }
+    function formateurDuGroupe(groupeId) {
+      return formateur() && get(/databases/$(database)/documents/groupes/$(groupeId)).data.get('formateurUid', '') == request.auth.uid;
+    }
+
+    match /users/{uid} {
+      allow read: if connecte() && (request.auth.uid == uid || admin() || caissier() || formateur());
+      allow create: if connecte() && request.auth.uid == uid && request.resource.data.role == 'etudiant';
+      allow update: if admin();
+      allow update: if connecte() && request.auth.uid == uid
+        && request.resource.data.role == resource.data.role
+        && request.resource.data.get('montantDu', 0) == resource.data.get('montantDu', 0)
+        && request.resource.data.get('groupeId', null) == resource.data.get('groupeId', null)
+        && request.resource.data.get('formationId', null) == resource.data.get('formationId', null)
+        && request.resource.data.get('statut', 'actif') == resource.data.get('statut', 'actif');
+      match /progression/{formationId} {
+        allow read, write: if connecte() && request.auth.uid == uid;
+      }
+    }
+
+    match /formations/{formationId} {
+      allow read: if true;
+      allow create, update, delete: if admin();
+    }
+
+    match /inscriptions/{inscriptionId} {
+      allow create: if true;
+      allow read: if admin() || formateur();
+      allow update, delete: if admin();
+    }
+
+    match /groupes/{groupeId} {
+      allow read: if admin() || formateur() || monGroupe(groupeId);
+      allow create, update, delete: if admin();
+    }
+
+    match /presences/{presenceId} {
+      allow read: if admin() || (formateur() && formateurDuGroupe(resource.data.groupeId)) || monGroupe(resource.data.groupeId);
+      allow create, update: if admin() || (formateur() && formateurDuGroupe(request.resource.data.groupeId));
+      allow delete: if admin();
+    }
+
+    match /paiements/{paiementId} {
+      allow read: if admin() || caissier() || (etudiant() && resource.data.etudiantUid == request.auth.uid);
+      allow create: if admin() || caissier();
+      allow update, delete: if admin();
+    }
+
+    match /evaluations/{evaluationId} {
+      allow read: if admin()
+        || (formateur() && formateurDuGroupe(resource.data.groupeId))
+        || (etudiant() && monGroupe(resource.data.groupeId));
+      allow create: if admin() || (formateur() && formateurDuGroupe(request.resource.data.groupeId));
+      allow update: if admin() || (formateur() && formateurDuGroupe(resource.data.groupeId));
+      allow delete: if admin();
+    }
+
+    match /annonces/{annonceId} {
+      allow read: if admin()
+        || (formateur() && formateurDuGroupe(resource.data.groupeId))
+        || (etudiant() && monGroupe(resource.data.groupeId));
+      allow create: if admin() || (formateur() && formateurDuGroupe(request.resource.data.groupeId));
+      allow update, delete: if admin() || (formateur() && formateurDuGroupe(resource.data.groupeId));
+    }
+
+    match /materiaux/{materiauId} {
+      allow read: if admin()
+        || (formateur() && formateurDuGroupe(resource.data.groupeId))
+        || (etudiant() && monGroupe(resource.data.groupeId));
+      allow create: if admin() || (formateur() && formateurDuGroupe(request.resource.data.groupeId));
+      allow update, delete: if admin() || (formateur() && formateurDuGroupe(resource.data.groupeId));
+    }
+
+    match /certificats/{numero} {
+      // Une page de vérification doit fonctionner sans compte.
+      allow read: if true;
+      allow create, update, delete: if admin();
+    }
+
+    match /compteurs/{document} {
+      allow read, write: if admin();
+    }
+
+    match /staffCodes/{code} {
+      allow read, write: if false;
+    }
+
+    match /config/{document} {
+      allow read: if true;
+      allow write: if admin();
+    }
+  }
+}
