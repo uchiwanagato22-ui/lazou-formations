@@ -238,9 +238,9 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
                                         ),
                                       ),
                                       title: Text(
-                                        student.nomComplet.isEmpty
-                                            ? 'Étudiant'
-                                            : student.nomComplet,
+                                        student.matricule.isNotEmpty
+                                            ? '#${student.matricule} — ${student.nomComplet.isEmpty ? "Étudiant" : student.nomComplet}'
+                                            : (student.nomComplet.isEmpty ? 'Étudiant' : student.nomComplet),
                                         style: const TextStyle(
                                           fontWeight: FontWeight.w700,
                                         ),

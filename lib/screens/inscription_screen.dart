@@ -52,7 +52,7 @@ class _InscriptionScreenState extends State<InscriptionScreen> {
         await Future.delayed(const Duration(milliseconds: 600));
       }
     } catch (_) {
-      erreur = 'Impossible d'envoyer la demande. Vérifie ta connexion puis réessaie.';
+      erreur = "Impossible d'envoyer la demande. Vérifie ta connexion puis réessaie.";
     }
 
     if (!mounted) return;

@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import '../../models/evaluation_model.dart';
 import '../../models/group_model.dart';
 import '../../models/student_profile.dart';
+import '../../models/user_role.dart';
 import '../../services/auth_service.dart';
 import '../../services/firestore_service.dart';
 import '../../theme/app_theme.dart';

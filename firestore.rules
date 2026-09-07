@@ -50,6 +50,14 @@ service cloud.firestore {
       allow delete: if admin();
     }
 
+    match /depenses/{depenseId} {
+      allow read, create, update, delete: if admin();
+    }
+
+    match /prospects/{prospectId} {
+      allow read, create, update, delete: if admin() || caissier();
+    }
+
     match /paiements/{paiementId} {
       allow read: if admin() || caissier() || (etudiant() && resource.data.etudiantUid == request.auth.uid);
       allow create: if admin() || caissier();

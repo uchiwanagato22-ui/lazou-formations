@@ -1,6 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import '../../models/group_model.dart';
 import '../../services/firestore_service.dart';
 import '../../theme/app_theme.dart';
 
@@ -16,6 +17,12 @@ class AdminInscriptionsScreen extends StatelessWidget {
       body: StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
         stream: firestore.watchInscriptions(),
         builder: (context, snapshot) {
+          if (snapshot.hasError) {
+            return Center(child: Padding(
+              padding: const EdgeInsets.all(24),
+              child: Text('Impossible de charger les inscriptions.\n${snapshot.error}', textAlign: TextAlign.center),
+            ));
+          }
           if (snapshot.connectionState == ConnectionState.waiting) {
             return const Center(child: CircularProgressIndicator());
           }
@@ -28,8 +35,11 @@ class AdminInscriptionsScreen extends StatelessWidget {
             itemCount: docs.length,
             separatorBuilder: (_, __) => const SizedBox(height: 10),
             itemBuilder: (context, i) {
-              final data = docs[i].data();
+              final doc = docs[i];
+              final data = doc.data();
               final statut = data['statut'] as String? ?? 'en_attente';
+              final uid = (data['uid'] ?? '').toString();
+              final hasAccount = uid.isNotEmpty;
               return Card(
                 child: Padding(
                   padding: const EdgeInsets.all(14),
@@ -37,25 +47,34 @@ class AdminInscriptionsScreen extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        '${data['prenom'] ?? ''} ${data['nom'] ?? ''}',
+                        '${data['prenom'] ?? ''} ${data['nom'] ?? ''}'.trim(),
                         style: const TextStyle(fontWeight: FontWeight.w700),
                       ),
-                      const SizedBox(height: 2),
+                      const SizedBox(height: 3),
                       Text(data['formationTitre'] ?? '', style: const TextStyle(color: LazouColors.textSecondary)),
                       const SizedBox(height: 2),
                       Text(data['telephone'] ?? '', style: const TextStyle(color: LazouColors.textSecondary)),
-                      const SizedBox(height: 10),
+                      if ((data['email'] ?? '').toString().isNotEmpty) ...[
+                        const SizedBox(height: 2),
+                        Text(data['email'], style: const TextStyle(color: LazouColors.textSecondary)),
+                      ],
+                      const SizedBox(height: 8),
                       Row(
                         children: [
                           _StatutBadge(statut: statut),
+                          const SizedBox(width: 8),
+                          if (hasAccount && statut == 'en_attente')
+                            const Text('Compte lié', style: TextStyle(fontSize: 12, color: LazouColors.success)),
+                          if (!hasAccount && statut == 'en_attente')
+                            const Text('Sans compte', style: TextStyle(fontSize: 12, color: LazouColors.textSecondary)),
                           const Spacer(),
                           if (statut == 'en_attente') ...[
                             TextButton(
-                              onPressed: () => firestore.mettreAJourStatutInscription(docs[i].id, 'refusee'),
+                              onPressed: () => _refuser(context, firestore, doc.id),
                               child: const Text('Refuser'),
                             ),
                             ElevatedButton(
-                              onPressed: () => firestore.mettreAJourStatutInscription(docs[i].id, 'validee'),
+                              onPressed: () => _valider(context, firestore, doc.id, data),
                               child: const Text('Valider'),
                             ),
                           ],
@@ -70,6 +89,92 @@ class AdminInscriptionsScreen extends StatelessWidget {
         },
       ),
     );
+  }
+
+  Future<void> _refuser(BuildContext context, FirestoreService firestore, String id) async {
+    try {
+      await firestore.mettreAJourStatutInscription(id, 'refusee');
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Impossible de refuser cette demande.')));
+      }
+    }
+  }
+
+  Future<void> _valider(
+    BuildContext context,
+    FirestoreService firestore,
+    String inscriptionId,
+    Map<String, dynamic> data,
+  ) async {
+    final uid = (data['uid'] ?? '').toString();
+    final formationId = (data['formationId'] ?? '').toString();
+    final formationTitre = (data['formationTitre'] ?? '').toString();
+
+    try {
+      final groupes = await firestore.getGroupesOnce();
+      final groupesCompatibles = groupes.where((g) => g.formationId == formationId).toList();
+      FormationGroup? groupe;
+      var continuer = true;
+
+      if (uid.isNotEmpty && groupesCompatibles.isNotEmpty) {
+        final choix = await _choisirGroupe(context, groupesCompatibles, formationTitre);
+        if (!context.mounted) return;
+        continuer = choix.$1;
+        groupe = choix.$2;
+      }
+      if (!continuer) return;
+
+      await firestore.validerInscription(
+        inscriptionId: inscriptionId,
+        uid: uid.isEmpty ? null : uid,
+        formationId: formationId,
+        formationTitre: formationTitre,
+        groupe: groupe,
+      );
+
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text(uid.isNotEmpty
+              ? (groupe == null ? 'Inscription validée et formation affectée.' : 'Inscription validée et étudiant affecté au groupe.')
+              : 'Inscription validée. L’étudiant devra créer son compte pour être affecté automatiquement.'),
+        ));
+      }
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Impossible de valider cette inscription.')));
+      }
+    }
+  }
+
+  Future<(bool, FormationGroup?)> _choisirGroupe(
+    BuildContext context,
+    List<FormationGroup> groupes,
+    String formationTitre,
+  ) async {
+    final result = await showDialog<(bool, FormationGroup?)>(
+      context: context,
+      builder: (ctx) => SimpleDialog(
+        title: Text('Groupe — $formationTitre'),
+        children: [
+          SimpleDialogOption(
+            onPressed: () => Navigator.pop(ctx, (true, null)),
+            child: const Padding(
+              padding: EdgeInsets.symmetric(vertical: 10),
+              child: Text('Valider sans affecter de groupe'),
+            ),
+          ),
+          ...groupes.map((g) => SimpleDialogOption(
+                onPressed: () => Navigator.pop(ctx, (true, g)),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 10),
+                  child: Text('${g.nom} · ${g.jours.isEmpty ? 'Jours non définis' : g.jours} · ${g.horaire.isEmpty ? 'Horaire non défini' : g.horaire}'),
+                ),
+              )),
+        ],
+      ),
+    );
+    return result ?? (false, null);
   }
 }
 

@@ -7,6 +7,8 @@ import '../models/evaluation_model.dart';
 import '../models/announcement_model.dart';
 import '../models/certificate_model.dart';
 import '../models/material_model.dart';
+import '../models/expense_model.dart';
+import '../models/prospect_model.dart';
 
 /// Accès Firestore centralisé. Un seul endroit à modifier si les noms de
 /// collections changent. Toutes les méthodes supposent que Firebase est
@@ -63,6 +65,39 @@ class FirestoreService {
 
   Future<void> mettreAJourStatutInscription(String inscriptionId, String statut) {
     return _db.collection('inscriptions').doc(inscriptionId).update({'statut': statut});
+  }
+
+  /// Valide une demande et, si elle provient d'un compte connecté, affecte
+  /// immédiatement l'étudiant à la formation et éventuellement au groupe.
+  Future<void> validerInscription({
+    required String inscriptionId,
+    required String? uid,
+    required String formationId,
+    required String formationTitre,
+    FormationGroup? groupe,
+  }) async {
+    if (uid != null && uid.isNotEmpty) {
+      final data = <String, dynamic>{
+        'formationId': formationId,
+        'formationTitre': formationTitre,
+        'statut': 'actif',
+      };
+      if (groupe != null) {
+        data.addAll({
+          'groupeId': groupe.id,
+          'groupeNom': groupe.nom,
+          'formateurUid': groupe.formateurUid,
+          'formateurNom': groupe.formateurNom,
+        });
+      }
+      await _db.collection('users').doc(uid).update(data);
+    }
+    await _db.collection('inscriptions').doc(inscriptionId).update({
+      'statut': 'validee',
+      'traiteeLe': FieldValue.serverTimestamp(),
+      if (groupe != null) 'groupeId': groupe.id,
+      if (groupe != null) 'groupeNom': groupe.nom,
+    });
   }
 
 
@@ -196,6 +231,11 @@ class FirestoreService {
     return snap.docs.map((d) => Formation.fromMap(d.id, d.data())).toList();
   }
 
+  Future<List<FormationGroup>> getGroupesOnce() async {
+    final snap = await _db.collection('groupes').orderBy('nom').get();
+    return snap.docs.map(FormationGroup.fromDoc).toList();
+  }
+
   Future<List<StudentProfile>> getEtudiantsOnce() async {
     final snap = await _db.collection('users').where('role', isEqualTo: 'etudiant').get();
     final list = snap.docs.map(StudentProfile.fromDoc).toList();
@@ -261,6 +301,55 @@ class FirestoreService {
     }, SetOptions(merge: true));
   }
 
+
+  /// Résumé de présence d'un étudiant, calculé à partir des feuilles
+  /// d'appel de son groupe.
+  Stream<Map<String, int>> watchStatistiquesPresenceEtudiant(String uid, String? groupeId) {
+    if (groupeId == null || groupeId.isEmpty) {
+      return Stream.value({'total': 0, 'presents': 0, 'absents': 0, 'retards': 0});
+    }
+    return _db.collection('presences').where('groupeId', isEqualTo: groupeId).snapshots().map((snap) {
+      var presents = 0;
+      var absents = 0;
+      var retards = 0;
+      for (final doc in snap.docs) {
+        final etudiants = (doc.data()['etudiants'] as Map?) ?? {};
+        switch (etudiants[uid]?.toString()) {
+          case 'present':
+            presents++;
+            break;
+          case 'absent':
+            absents++;
+            break;
+          case 'retard':
+            retards++;
+            break;
+        }
+      }
+      return {
+        'total': presents + absents + retards,
+        'presents': presents,
+        'absents': absents,
+        'retards': retards,
+      };
+    });
+  }
+
+  /// Moyenne des notes d'un étudiant sur toutes les évaluations de son groupe.
+  Stream<double?> watchMoyenneEtudiant(String uid, String? groupeId) {
+    if (groupeId == null || groupeId.isEmpty) return Stream.value(null);
+    return _db.collection('evaluations').where('groupeId', isEqualTo: groupeId).snapshots().map((snap) {
+      final notes = <double>[];
+      for (final doc in snap.docs) {
+        final raw = (doc.data()['notes'] as Map?) ?? {};
+        final value = raw[uid];
+        if (value is num) notes.add(value.toDouble());
+      }
+      if (notes.isEmpty) return null;
+      return notes.reduce((a, b) => a + b) / notes.length;
+    });
+  }
+
   // --- Progression étudiant (leçons terminées) ---
   // Stocké sous users/{uid}/progression/{formationId} = { lessonIds: [...] }
   // Base pour un futur badge/pourcentage d'avancement par formation.
@@ -315,11 +404,105 @@ class FirestoreService {
     return _db.collection('users').doc(uid).update({'montantDu': montant});
   }
 
+  /// Le matricule Lazou (celui déjà utilisé sur papier, ex: "33841") — pas
+  /// généré par l'app, l'admin tape le numéro réel du centre pour que les
+  /// deux systèmes restent alignés.
+  Future<void> definirMatricule(String uid, String matricule) {
+    return _db.collection('users').doc(uid).update({'matricule': matricule.trim()});
+  }
+
+  /// Recherche rapide d'un étudiant par matricule — c'est le vrai réflexe
+  /// quotidien de Lazou pour la présence, pas la recherche par nom.
+  Future<StudentProfile?> chercherParMatricule(String matricule) async {
+    final snap = await _db.collection('users').where('matricule', isEqualTo: matricule.trim()).limit(1).get();
+    if (snap.docs.isEmpty) return null;
+    return StudentProfile.fromDoc(snap.docs.first);
+  }
+
   Stream<double> watchTotalEncaisse() {
     return _db.collection('paiements').snapshots().map(
           (snap) => snap.docs.fold<double>(0, (total, d) => total + ((d.data()['montant'] as num?)?.toDouble() ?? 0)),
         );
   }
+
+  /// Total encaissé depuis le début du mois courant.
+  /// Le filtre est appliqué côté client pour rester compatible avec les
+  /// paiements historiques qui peuvent ne pas avoir de date indexée.
+  Stream<double> watchEncaisseMoisCourant() {
+    return _db.collection('paiements').snapshots().map((snap) {
+      final now = DateTime.now();
+      final debut = DateTime(now.year, now.month, 1);
+      return snap.docs.fold<double>(0, (total, d) {
+        final ts = d.data()['date'];
+        final date = ts is Timestamp ? ts.toDate() : null;
+        if (date == null || date.isBefore(debut)) return total;
+        return total + ((d.data()['montant'] as num?)?.toDouble() ?? 0);
+      });
+    });
+  }
+
+  /// Total encaissé aujourd'hui.
+  Stream<double> watchEncaisseAujourdHui() {
+    return _db.collection('paiements').snapshots().map((snap) {
+      final now = DateTime.now();
+      final debut = DateTime(now.year, now.month, now.day);
+      final fin = debut.add(const Duration(days: 1));
+      return snap.docs.fold<double>(0, (total, d) {
+        final ts = d.data()['date'];
+        final date = ts is Timestamp ? ts.toDate() : null;
+        if (date == null || date.isBefore(debut) || !date.isBefore(fin)) return total;
+        return total + ((d.data()['montant'] as num?)?.toDouble() ?? 0);
+      });
+    });
+  }
+
+  /// Nombre d'étudiants ayant encore un solde positif.
+  Stream<int> watchNombreEtudiantsEnImpayes() {
+    return watchEtudiants().asyncMap((etudiants) async {
+      if (etudiants.isEmpty) return 0;
+      final paiements = await _db.collection('paiements').get();
+      final payes = <String, double>{};
+      for (final doc in paiements.docs) {
+        final d = doc.data();
+        final uid = (d['etudiantUid'] ?? '').toString();
+        if (uid.isEmpty) continue;
+        payes[uid] = (payes[uid] ?? 0) + ((d['montant'] as num?)?.toDouble() ?? 0);
+      }
+      return etudiants.where((e) => (e.montantDu ?? 0) - (payes[e.uid] ?? 0) > 0.01).length;
+    });
+  }
+
+  // --- Dépenses ---
+
+  Future<void> ajouterDepense(Depense depense) => _db.collection('depenses').add(depense.toMap());
+
+  Stream<List<Depense>> watchDepenses() => _db.collection('depenses').orderBy('date', descending: true).snapshots().map(
+    (snap) => snap.docs.map(Depense.fromDoc).toList(),
+  );
+
+  Stream<double> watchDepensesMoisCourant() => _db.collection('depenses').snapshots().map((snap) {
+    final now = DateTime.now();
+    final debut = DateTime(now.year, now.month, 1);
+    return snap.docs.fold<double>(0, (total, d) {
+      final ts = d.data()['date'];
+      final date = ts is Timestamp ? ts.toDate() : null;
+      if (date == null || date.isBefore(debut)) return total;
+      return total + ((d.data()['montant'] as num?)?.toDouble() ?? 0);
+    });
+  });
+
+  // --- Prospects / admissions commerciales ---
+
+  Future<void> ajouterProspect(Prospect prospect) => _db.collection('prospects').add(prospect.toMap());
+
+  Stream<List<Prospect>> watchProspects() => _db.collection('prospects').orderBy('creeLe', descending: true).snapshots().map(
+    (snap) => snap.docs.map(Prospect.fromDoc).toList(),
+  );
+
+  Future<void> mettreAJourStatutProspect(String id, StatutProspect statut) =>
+      _db.collection('prospects').doc(id).update({'statut': statut.name});
+
+  Stream<int> watchNombreProspectsASuivre() => watchProspects().map((items) => items.where((p) => p.statut != StatutProspect.perdu && p.statut != StatutProspect.inscrit).length);
 
   // --- Évaluations / Notes ---
   // Une évaluation = une note par étudiant du groupe, stockée dans une map

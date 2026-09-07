@@ -11,8 +11,11 @@ import 'admin_groups_screen.dart';
 import 'attendance_screen.dart';
 import 'admin_students_screen.dart';
 import 'paiements_screen.dart';
+import 'impayes_screen.dart';
 import 'admin_certificats_screen.dart';
 import 'statistiques_screen.dart';
+import 'depenses_screen.dart';
+import 'prospects_screen.dart';
 import '../formateur/annonces_screen.dart';
 import '../formateur/evaluations_screen.dart';
 import '../formateur/cours_screen.dart';
@@ -51,6 +54,25 @@ class AdminDashboardScreen extends StatelessWidget {
             const SizedBox(width: 10),
             Expanded(child: StreamBuilder<int>(stream: firestore.watchNombreInscriptionsEnAttente(), builder: (_, s) => _SmallMetric(icon: Icons.pending_actions_outlined, label: 'À valider', value: '${s.data ?? 0}'))),
           ]),
+          const SizedBox(height: 10),
+          Row(children: [
+            Expanded(child: StreamBuilder<double>(stream: firestore.watchEncaisseAujourdHui(), builder: (_, s) => _SmallMetric(icon: Icons.today_outlined, label: "Aujourd'hui", value: '${(s.data ?? 0).toStringAsFixed(0)} MRU'))),
+            const SizedBox(width: 10),
+            Expanded(child: StreamBuilder<double>(stream: firestore.watchEncaisseMoisCourant(), builder: (_, s) => _SmallMetric(icon: Icons.calendar_month_outlined, label: 'Ce mois', value: '${(s.data ?? 0).toStringAsFixed(0)} MRU'))),
+          ]),
+          const SizedBox(height: 10),
+          StreamBuilder<int>(
+            stream: firestore.watchNombreEtudiantsEnImpayes(),
+            builder: (_, s) => Card(
+              child: ListTile(
+                leading: CircleAvatar(backgroundColor: LazouColors.warning.withValues(alpha: .12), child: const Icon(Icons.warning_amber_rounded, color: LazouColors.warning)),
+                title: const Text('Étudiants avec solde restant', style: TextStyle(fontWeight: FontWeight.w700)),
+                subtitle: const Text('À suivre dans le module de recouvrement'),
+                trailing: Text('${s.data ?? 0}', style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w900)),
+                onTap: () => _open(context, const ImpayesScreen()),
+              ),
+            ),
+          ),
           const SizedBox(height: 18),
           const Text('Gestion du centre', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800)),
           const SizedBox(height: 10),
@@ -60,7 +82,10 @@ class AdminDashboardScreen extends StatelessWidget {
           _AdminCard(icon: Icons.how_to_reg_outlined, label: 'Inscriptions', description: 'Demandes à valider', builder: () => const AdminInscriptionsScreen()),
           _AdminCard(icon: Icons.event_available_outlined, label: 'Sessions & groupes', description: 'Planning, salles et affectations', builder: () => const AdminGroupsScreen()),
           _AdminCard(icon: Icons.fact_check_outlined, label: 'Présences', description: 'Suivi quotidien des étudiants', builder: () => const AttendanceScreen()),
-          _AdminCard(icon: Icons.payments_outlined, label: 'Paiements', description: 'Encaissements et impayés', builder: () => const PaiementsScreen()),
+          _AdminCard(icon: Icons.payments_outlined, label: 'Paiements', description: 'Encaissements et historique', builder: () => const PaiementsScreen()),
+          _AdminCard(icon: Icons.account_balance_wallet_outlined, label: 'Recouvrement', description: 'Impayés et soldes à récupérer', builder: () => const ImpayesScreen()),
+          _AdminCard(icon: Icons.person_search_outlined, label: 'Prospects', description: 'Suivre les demandes avant inscription', builder: () => const ProspectsScreen()),
+          _AdminCard(icon: Icons.receipt_long_outlined, label: 'Dépenses', description: 'Charges du centre et rentabilité', builder: () => const DepensesScreen()),
           _AdminCard(icon: Icons.workspace_premium_outlined, label: 'Certificats', description: 'Émission et vérification', builder: () => const AdminCertificatsScreen()),
           _AdminCard(icon: Icons.bar_chart_outlined, label: 'Statistiques', description: 'Activité et performance du centre', builder: () => const StatistiquesScreen()),
           _AdminCard(icon: Icons.assignment_outlined, label: 'Évaluations & notes', description: 'Tous les groupes, tous les formateurs', builder: () => const EvaluationsScreen()),

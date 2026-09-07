@@ -6,6 +6,8 @@ import '../../models/student_profile.dart';
 import '../../services/firestore_service.dart';
 import '../../theme/app_theme.dart';
 import 'paiements_screen.dart';
+import '../../models/certificate_model.dart';
+import '../certificate_detail_screen.dart';
 
 class AdminStudentsScreen extends StatefulWidget {
   const AdminStudentsScreen({super.key});
@@ -29,7 +31,7 @@ class _AdminStudentsScreenState extends State<AdminStudentsScreen> {
             child: TextField(
               onChanged: (value) => setState(() => _recherche = value.trim().toLowerCase()),
               decoration: InputDecoration(
-                hintText: 'Rechercher un étudiant...',
+                hintText: 'Matricule, nom, téléphone...',
                 prefixIcon: const Icon(Icons.search),
                 suffixIcon: _recherche.isEmpty ? null : IconButton(
                   icon: const Icon(Icons.clear),
@@ -48,7 +50,7 @@ class _AdminStudentsScreenState extends State<AdminStudentsScreen> {
                 }
                 final students = (snapshot.data ?? []).where((s) {
                   if (_recherche.isEmpty) return true;
-                  return '${s.nomComplet} ${s.email} ${s.telephone} ${s.formationTitre ?? ''}'
+                  return '${s.matricule} ${s.nomComplet} ${s.email} ${s.telephone} ${s.formationTitre ?? ''}'
                       .toLowerCase().contains(_recherche);
                 }).toList();
                 if (students.isEmpty) {
@@ -82,8 +84,26 @@ class _StudentTile extends StatelessWidget {
           backgroundColor: LazouColors.primary.withValues(alpha: .12),
           child: Text(_initiales(student.nomComplet), style: const TextStyle(fontWeight: FontWeight.w800)),
         ),
-        title: Text(student.nomComplet.isEmpty ? 'Étudiant sans nom' : student.nomComplet,
-            style: const TextStyle(fontWeight: FontWeight.w700)),
+        title: Row(
+          children: [
+            if (student.matricule.isNotEmpty) ...[
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                decoration: BoxDecoration(
+                  color: LazouColors.secondary.withValues(alpha: .15),
+                  borderRadius: BorderRadius.circular(6),
+                ),
+                child: Text('#${student.matricule}',
+                    style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 12, color: LazouColors.secondary)),
+              ),
+              const SizedBox(width: 8),
+            ],
+            Expanded(
+              child: Text(student.nomComplet.isEmpty ? 'Étudiant sans nom' : student.nomComplet,
+                  style: const TextStyle(fontWeight: FontWeight.w700)),
+            ),
+          ],
+        ),
         subtitle: Text([
           if ((student.formationTitre ?? '').isNotEmpty) student.formationTitre!,
           if (student.telephone.isNotEmpty) student.telephone,
@@ -128,6 +148,8 @@ class AdminStudentDetailScreen extends StatelessWidget {
             padding: const EdgeInsets.all(16),
             children: [
               _Header(student: student),
+              const SizedBox(height: 12),
+              _MatriculeCard(student: student),
               const SizedBox(height: 16),
               _InfoCard(title: 'Formation', icon: Icons.school_outlined, children: [
                 _InfoRow('Formation', student.formationTitre ?? 'Non affectée'),
@@ -142,17 +164,125 @@ class AdminStudentDetailScreen extends StatelessWidget {
               const SizedBox(height: 12),
               _FinancesCard(student: student),
               const SizedBox(height: 12),
-              _InfoCard(title: 'Suivi', icon: Icons.analytics_outlined, children: const [
-                _InfoRow('Présence', 'À connecter au module Présences'),
-                _InfoRow('Résultats', 'À connecter au module Notes'),
-                _InfoRow('Certificat', 'À connecter au module Certificats'),
-              ]),
+              _StudentFollowUp(student: student),
             ],
           );
         },
       ),
     );
   }
+}
+
+
+class _StudentFollowUp extends StatelessWidget {
+  final StudentProfile student;
+  const _StudentFollowUp({required this.student});
+
+  @override
+  Widget build(BuildContext context) {
+    final firestore = context.read<FirestoreService>();
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Row(children: [
+              Icon(Icons.analytics_outlined, color: LazouColors.primary),
+              SizedBox(width: 8),
+              Text('Suivi pédagogique', style: TextStyle(fontWeight: FontWeight.w800)),
+            ]),
+            const SizedBox(height: 14),
+            StreamBuilder<Map<String, int>>(
+              stream: firestore.watchStatistiquesPresenceEtudiant(student.uid, student.groupeId),
+              builder: (context, snapshot) {
+                final data = snapshot.data ?? {};
+                final total = data['total'] ?? 0;
+                final presents = data['presents'] ?? 0;
+                final taux = total == 0 ? 0 : (presents / total * 100).round();
+                return _FollowUpRow(
+                  icon: Icons.fact_check_outlined,
+                  label: 'Présence',
+                  value: total == 0 ? 'Aucune séance' : '$taux% ($presents/$total)',
+                  detail: total == 0 ? null : 'Présents: $presents • Absents: ${data['absents'] ?? 0} • Retards: ${data['retards'] ?? 0}',
+                );
+              },
+            ),
+            const Divider(height: 24),
+            StreamBuilder<double?>(
+              stream: firestore.watchMoyenneEtudiant(student.uid, student.groupeId),
+              builder: (context, snapshot) => _FollowUpRow(
+                icon: Icons.grade_outlined,
+                label: 'Résultats',
+                value: snapshot.data == null ? 'Aucune note' : '${snapshot.data!.toStringAsFixed(1)}/20',
+                detail: snapshot.data == null ? null : 'Moyenne calculée sur les évaluations disponibles',
+              ),
+            ),
+            const Divider(height: 24),
+            StreamBuilder<List<Certificate>>(
+              stream: firestore.watchCertificatsEtudiant(student.uid),
+              builder: (context, snapshot) {
+                final certificats = snapshot.data ?? [];
+                return Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    _FollowUpRow(
+                      icon: Icons.workspace_premium_outlined,
+                      label: 'Certificats',
+                      value: certificats.isEmpty ? 'Aucun certificat' : '${certificats.length} certificat${certificats.length > 1 ? 's' : ''}',
+                    ),
+                    if (certificats.isNotEmpty) ...[
+                      const SizedBox(height: 8),
+                      ...certificats.map((certificat) => ListTile(
+                        contentPadding: EdgeInsets.zero,
+                        dense: true,
+                        leading: const Icon(Icons.verified_outlined, color: LazouColors.secondary),
+                        title: Text(certificat.formationTitre, style: const TextStyle(fontWeight: FontWeight.w700)),
+                        subtitle: Text(certificat.numero),
+                        trailing: const Icon(Icons.chevron_right),
+                        onTap: () => Navigator.of(context).push(
+                          MaterialPageRoute(builder: (_) => CertificateDetailScreen(certificate: certificat)),
+                        ),
+                      )),
+                    ],
+                  ],
+                );
+              },
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _FollowUpRow extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final String value;
+  final String? detail;
+  const _FollowUpRow({required this.icon, required this.label, required this.value, this.detail});
+
+  @override
+  Widget build(BuildContext context) => Row(
+    crossAxisAlignment: CrossAxisAlignment.start,
+    children: [
+      Icon(icon, size: 22, color: LazouColors.primary),
+      const SizedBox(width: 10),
+      Expanded(child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(label, style: const TextStyle(color: LazouColors.textSecondary, fontSize: 12)),
+          const SizedBox(height: 2),
+          Text(value, style: const TextStyle(fontWeight: FontWeight.w800)),
+          if (detail != null) ...[
+            const SizedBox(height: 2),
+            Text(detail!, style: const TextStyle(color: LazouColors.textSecondary, fontSize: 11)),
+          ],
+        ],
+      )),
+    ],
+  );
 }
 
 class _Header extends StatelessWidget {
@@ -211,6 +341,82 @@ class _InfoRow extends StatelessWidget {
           Expanded(child: Text(value, style: const TextStyle(fontWeight: FontWeight.w600))),
         ]),
       );
+}
+
+class _MatriculeCard extends StatelessWidget {
+  final StudentProfile student;
+  const _MatriculeCard({required this.student});
+
+  @override
+  Widget build(BuildContext context) {
+    final firestore = context.read<FirestoreService>();
+    return Card(
+      color: LazouColors.primary,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
+        child: Row(
+          children: [
+            const Icon(Icons.badge_outlined, color: Colors.white),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text('Matricule Lazou', style: TextStyle(color: Colors.white70, fontSize: 11)),
+                  Text(
+                    student.matricule.isEmpty ? 'Non défini' : student.matricule,
+                    style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.w900),
+                  ),
+                ],
+              ),
+            ),
+            TextButton(
+              onPressed: () => _dialogueMatricule(context, firestore, student),
+              style: TextButton.styleFrom(foregroundColor: Colors.white),
+              child: const Text('Modifier'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+void _dialogueMatricule(BuildContext context, FirestoreService firestore, StudentProfile student) {
+  final ctrl = TextEditingController(text: student.matricule);
+  showDialog(
+    context: context,
+    builder: (ctx) => AlertDialog(
+      title: const Text('Matricule Lazou'),
+      content: TextField(
+        controller: ctrl,
+        keyboardType: TextInputType.number,
+        decoration: const InputDecoration(labelText: 'Numéro (ex: 33841)'),
+        autofocus: true,
+      ),
+      actions: [
+        TextButton(onPressed: () => Navigator.of(ctx).pop(), child: const Text('Annuler')),
+        ElevatedButton(
+          onPressed: () async {
+            final valeur = ctrl.text.trim();
+            if (valeur.isEmpty) return;
+            final existant = await firestore.chercherParMatricule(valeur);
+            if (existant != null && existant.uid != student.uid) {
+              if (context.mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(content: Text('Ce matricule est déjà utilisé par ${existant.nomComplet}')),
+                );
+              }
+              return;
+            }
+            await firestore.definirMatricule(student.uid, valeur);
+            if (ctx.mounted) Navigator.of(ctx).pop();
+          },
+          child: const Text('Enregistrer'),
+        ),
+      ],
+    ),
+  );
 }
 
 void _dialogueMontantDu(BuildContext context, FirestoreService firestore, StudentProfile student) {

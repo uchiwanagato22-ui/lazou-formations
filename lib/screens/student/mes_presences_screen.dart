@@ -46,6 +46,14 @@ class MesPresencesScreen extends StatelessWidget {
               return ListView(
                 padding: const EdgeInsets.all(16),
                 children: [
+                  if (student.matricule.isNotEmpty)
+                    Padding(
+                      padding: const EdgeInsets.only(bottom: 12),
+                      child: Text(
+                        'Ton matricule Lazou : ${student.matricule}',
+                        style: const TextStyle(color: LazouColors.textSecondary, fontSize: 13),
+                      ),
+                    ),
                   Card(
                     color: LazouColors.primary,
                     child: Padding(

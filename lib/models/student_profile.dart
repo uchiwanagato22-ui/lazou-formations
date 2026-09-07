@@ -2,6 +2,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 
 class StudentProfile {
   final String uid;
+  final String matricule;
   final String nomComplet;
   final String email;
   final String telephone;
@@ -14,6 +15,7 @@ class StudentProfile {
 
   const StudentProfile({
     required this.uid,
+    this.matricule = '',
     required this.nomComplet,
     required this.email,
     required this.telephone,
@@ -30,6 +32,7 @@ class StudentProfile {
     final ts = d['creeLe'];
     return StudentProfile(
       uid: doc.id,
+      matricule: (d['matricule'] ?? '').toString(),
       nomComplet: (d['nomComplet'] ?? '').toString(),
       email: (d['email'] ?? '').toString(),
       telephone: (d['telephone'] ?? '').toString(),
