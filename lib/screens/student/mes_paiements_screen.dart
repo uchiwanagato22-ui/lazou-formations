@@ -5,6 +5,7 @@ import '../../models/payment_model.dart';
 import '../../models/student_profile.dart';
 import '../../services/auth_service.dart';
 import '../../services/firestore_service.dart';
+import '../../services/receipt_service.dart';
 import '../../theme/app_theme.dart';
 
 /// Lecture seule côté étudiant — seul le staff (admin/caissier) peut
@@ -76,9 +77,18 @@ class MesPaiementsScreen extends StatelessWidget {
                             leading: const Icon(Icons.check_circle_outline, color: LazouColors.success),
                             title: Text('${p.montant.toStringAsFixed(0)} MRU', style: const TextStyle(fontWeight: FontWeight.w700)),
                             subtitle: Text(p.methode.label),
-                            trailing: p.date != null
-                                ? Text('${p.date!.day}/${p.date!.month}/${p.date!.year}', style: const TextStyle(fontSize: 12))
-                                : null,
+                            trailing: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                if (p.date != null)
+                                  Text('${p.date!.day}/${p.date!.month}/${p.date!.year}', style: const TextStyle(fontSize: 12)),
+                                IconButton(
+                                  icon: const Icon(Icons.receipt_long_outlined, size: 20),
+                                  tooltip: 'Partager le reçu',
+                                  onPressed: () => ReceiptService.partagerRecu(p, matriculeEtudiant: student.matricule),
+                                ),
+                              ],
+                            ),
                           ),
                         )),
                 ],

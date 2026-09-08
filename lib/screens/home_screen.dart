@@ -187,12 +187,12 @@ class _ContactCard extends StatelessWidget {
             const Text('Nous contacter', style: TextStyle(fontWeight: FontWeight.w700)),
             const SizedBox(height: 10),
             InkWell(
-              onTap: () => launchUrl(Uri.parse('tel:+22222171785')),
-              child: const _ContactRow(icon: Icons.phone, label: '22 17 17 85 · Appeler'),
+              onTap: () => launchUrl(Uri.parse('tel:+22232171785')),
+              child: const _ContactRow(icon: Icons.phone, label: '32 17 17 85 · Appeler'),
             ),
             const SizedBox(height: 6),
             InkWell(
-              onTap: () => launchUrl(Uri.parse('https://wa.me/22222171785')),
+              onTap: () => launchUrl(Uri.parse('https://wa.me/22232171785')),
               child: const _ContactRow(icon: Icons.chat_outlined, label: 'WhatsApp · Nous écrire'),
             ),
             const SizedBox(height: 6),

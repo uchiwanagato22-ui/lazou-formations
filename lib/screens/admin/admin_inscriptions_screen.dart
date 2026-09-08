@@ -58,6 +58,39 @@ class AdminInscriptionsScreen extends StatelessWidget {
                         const SizedBox(height: 2),
                         Text(data['email'], style: const TextStyle(color: LazouColors.textSecondary)),
                       ],
+                      if ((data['matricule'] ?? '').toString().isNotEmpty) ...[
+                        const SizedBox(height: 4),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                          decoration: BoxDecoration(
+                            color: LazouColors.secondary.withValues(alpha: .15),
+                            borderRadius: BorderRadius.circular(6),
+                          ),
+                          child: Text('Matricule Lazou : #${data['matricule']}',
+                              style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 12, color: LazouColors.secondary)),
+                        ),
+                      ],
+                      if ((data['preuvePaiementUrl'] ?? '').toString().isNotEmpty) ...[
+                        const SizedBox(height: 6),
+                        InkWell(
+                          onTap: () => showDialog(
+                            context: context,
+                            builder: (_) => Dialog(
+                              child: InteractiveViewer(
+                                child: Image.network(data['preuvePaiementUrl']),
+                              ),
+                            ),
+                          ),
+                          child: const Row(
+                            children: [
+                              Icon(Icons.receipt_long_outlined, size: 16, color: LazouColors.primary),
+                              SizedBox(width: 4),
+                              Text('Voir la preuve de paiement',
+                                  style: TextStyle(color: LazouColors.primary, fontWeight: FontWeight.w600, fontSize: 12.5)),
+                            ],
+                          ),
+                        ),
+                      ],
                       const SizedBox(height: 8),
                       Row(
                         children: [
@@ -131,6 +164,7 @@ class AdminInscriptionsScreen extends StatelessWidget {
         formationId: formationId,
         formationTitre: formationTitre,
         groupe: groupe,
+        matricule: (data['matricule'] as String?)?.trim(),
       );
 
       if (context.mounted) {

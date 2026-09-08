@@ -62,6 +62,8 @@ dependencies:
   connectivity_plus: ^6.1.5 # détecter la connexion pour le mode faible réseau
   http: ^1.2.2 # appel de la fonction Vercel de vérification des codes staff + upload Cloudinary
   file_picker: ^8.1.7 # choisir un PDF/document depuis le téléphone pour "Mes cours"
+  pdf: ^3.11.1 # génération du reçu de paiement
+  printing: ^5.13.4 # partager/enregistrer le reçu (menu de partage natif, WhatsApp inclus)
 
 dev_dependencies:
   flutter_test:

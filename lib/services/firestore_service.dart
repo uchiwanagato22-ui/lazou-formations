@@ -45,6 +45,8 @@ class FirestoreService {
     required String telephone,
     String? email,
     String? uid,
+    String? matricule,
+    String? preuvePaiementUrl,
   }) {
     return _db.collection('inscriptions').add({
       'formationId': formationId,
@@ -54,6 +56,8 @@ class FirestoreService {
       'telephone': telephone,
       'email': email,
       'uid': uid,
+      'matricule': matricule,
+      'preuvePaiementUrl': preuvePaiementUrl,
       'statut': 'en_attente', // en_attente -> validee / refusee, changé par l'admin
       'creeLe': FieldValue.serverTimestamp(),
     });
@@ -75,6 +79,7 @@ class FirestoreService {
     required String formationId,
     required String formationTitre,
     FormationGroup? groupe,
+    String? matricule,
   }) async {
     if (uid != null && uid.isNotEmpty) {
       final data = <String, dynamic>{
@@ -82,6 +87,9 @@ class FirestoreService {
         'formationTitre': formationTitre,
         'statut': 'actif',
       };
+      if (matricule != null && matricule.isNotEmpty) {
+        data['matricule'] = matricule;
+      }
       if (groupe != null) {
         data.addAll({
           'groupeId': groupe.id,
@@ -289,6 +297,14 @@ class FirestoreService {
     return raw.map((key, value) => MapEntry(key.toString(), value.toString()));
   }
 
+  Stream<Map<String, String>> watchPresencesJour(String groupeId, DateTime date) {
+    return _db.collection('presences').doc(_attendanceId(groupeId, date)).snapshots().map((doc) {
+      final raw = doc.data()?['etudiants'];
+      if (raw is! Map) return <String, String>{};
+      return raw.map((key, value) => MapEntry(key.toString(), value.toString()));
+    });
+  }
+
   Future<void> enregistrerPresences(FormationGroup groupe, DateTime date, Map<String, String> statuses) {
     return _db.collection('presences').doc(_attendanceId(groupe.id, date)).set({
       'groupeId': groupe.id,
@@ -302,8 +318,24 @@ class FirestoreService {
   }
 
 
-  /// Résumé de présence d'un étudiant, calculé à partir des feuilles
-  /// d'appel de son groupe.
+  /// Pointe UN étudiant (trouvé par matricule) sur la séance du jour, sans
+  /// devoir recharger toute la feuille de présence du groupe — c'est le
+  /// vrai geste quotidien de Lazou : l'étudiant dit son numéro, le
+  /// formateur tape, coche présent/absent, au suivant.
+  Future<void> pointerPresenceUnique(FormationGroup groupe, DateTime date, String uid, String statut) {
+    final id = _attendanceId(groupe.id, date);
+    return _db.collection('presences').doc(id).set({
+      'groupeId': groupe.id,
+      'groupeNom': groupe.nom,
+      'formationId': groupe.formationId,
+      'formationTitre': groupe.formationTitre,
+      'date': Timestamp.fromDate(DateTime(date.year, date.month, date.day)),
+      'etudiants': {uid: statut},
+      'misAJourLe': FieldValue.serverTimestamp(),
+    }, SetOptions(merge: true));
+  }
+
+
   Stream<Map<String, int>> watchStatistiquesPresenceEtudiant(String uid, String? groupeId) {
     if (groupeId == null || groupeId.isEmpty) {
       return Stream.value({'total': 0, 'presents': 0, 'absents': 0, 'retards': 0});
@@ -409,6 +441,18 @@ class FirestoreService {
   /// deux systèmes restent alignés.
   Future<void> definirMatricule(String uid, String matricule) {
     return _db.collection('users').doc(uid).update({'matricule': matricule.trim()});
+  }
+
+  /// Enregistre les matricules de toute une classe en une fois — le
+  /// formateur tape la liste une seule fois au lieu d'ouvrir chaque fiche
+  /// étudiant séparément. Un seul batch Firestore, tout passe ou rien.
+  Future<void> enregistrerMatriculesGroupe(Map<String, String> matriculesParUid) async {
+    final batch = _db.batch();
+    matriculesParUid.forEach((uid, matricule) {
+      if (matricule.trim().isEmpty) return;
+      batch.update(_db.collection('users').doc(uid), {'matricule': matricule.trim()});
+    });
+    await batch.commit();
   }
 
   /// Recherche rapide d'un étudiant par matricule — c'est le vrai réflexe

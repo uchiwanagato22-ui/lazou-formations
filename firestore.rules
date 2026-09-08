@@ -59,7 +59,7 @@ service cloud.firestore {
     }
 
     match /paiements/{paiementId} {
-      allow read: if admin() || caissier() || (etudiant() && resource.data.etudiantUid == request.auth.uid);
+      allow read: if admin() || caissier() || formateur() || (etudiant() && resource.data.etudiantUid == request.auth.uid);
       allow create: if admin() || caissier();
       allow update, delete: if admin();
     }

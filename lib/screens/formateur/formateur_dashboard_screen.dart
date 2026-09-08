@@ -7,6 +7,9 @@ import '../admin/attendance_screen.dart';
 import 'evaluations_screen.dart';
 import 'annonces_screen.dart';
 import 'cours_screen.dart';
+import 'ma_classe_screen.dart';
+import 'pointage_matricule_screen.dart';
+import 'suivi_paiements_screen.dart';
 import '../../theme/app_theme.dart';
 
 class FormateurDashboardScreen extends StatelessWidget {
@@ -40,6 +43,9 @@ class FormateurDashboardScreen extends StatelessWidget {
                       const Card(child: Padding(padding: EdgeInsets.all(18), child: Text('Aucun groupe ne vous est encore affecté par la direction.'))),
                     ...groups.map((g) => _GroupCard(group: g)),
                     const SizedBox(height: 12),
+                    _ActionCard(icon: Icons.badge_outlined, title: 'Pointage rapide', subtitle: 'Taper un matricule, marquer présent/absent', onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const PointageMatriculeScreen()))),
+                    _ActionCard(icon: Icons.payments_outlined, title: 'Suivi paiements', subtitle: 'Qui est à jour, qui doit encore payer', onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const SuiviPaiementsScreen()))),
+                    _ActionCard(icon: Icons.groups_outlined, title: 'Ma classe', subtitle: 'Liste des étudiants et matricules par groupe', onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const MaClasseScreen()))),
                     _ActionCard(icon: Icons.fact_check_outlined, title: 'Présences', subtitle: 'Choisir un groupe et enregistrer les présences', onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const AttendanceScreen()))),
                     _ActionCard(icon: Icons.menu_book_outlined, title: 'Mes cours', subtitle: 'Publier des cours et supports pédagogiques', onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const CoursScreen()))),
                     _ActionCard(icon: Icons.assignment_outlined, title: 'Évaluations & notes', subtitle: 'Créer des évaluations et saisir les notes', onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const EvaluationsScreen()))),

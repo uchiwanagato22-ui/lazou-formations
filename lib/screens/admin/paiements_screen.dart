@@ -4,6 +4,7 @@ import '../../models/payment_model.dart';
 import '../../models/student_profile.dart';
 import '../../services/auth_service.dart';
 import '../../services/firestore_service.dart';
+import '../../services/receipt_service.dart';
 import '../../theme/app_theme.dart';
 
 /// Écran commun admin/caissier — c'est le rôle qui décide de ce qui est
@@ -77,9 +78,19 @@ class PaiementsScreen extends StatelessWidget {
                         ),
                         title: Text(p.etudiantNom, style: const TextStyle(fontWeight: FontWeight.w700)),
                         subtitle: Text('${p.formationTitre} • ${p.methode.label}${p.note != null && p.note!.isNotEmpty ? ' • ${p.note}' : ''}'),
-                        trailing: Text(
-                          '${p.montant.toStringAsFixed(0)} MRU',
-                          style: const TextStyle(fontWeight: FontWeight.w800, color: LazouColors.primary),
+                        trailing: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text(
+                              '${p.montant.toStringAsFixed(0)} MRU',
+                              style: const TextStyle(fontWeight: FontWeight.w800, color: LazouColors.primary),
+                            ),
+                            IconButton(
+                              icon: const Icon(Icons.receipt_long_outlined, size: 20),
+                              tooltip: 'Partager le reçu',
+                              onPressed: () => ReceiptService.partagerRecu(p),
+                            ),
+                          ],
                         ),
                       ),
                     );
