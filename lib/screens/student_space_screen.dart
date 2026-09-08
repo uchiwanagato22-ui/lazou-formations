@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
 import '../theme/app_theme.dart';
+import 'package:provider/provider.dart';
+import '../services/auth_service.dart';
+import 'auth/login_screen.dart';
 import '../widgets/animations.dart';
 import 'student/mes_paiements_screen.dart';
 import 'student/mes_resultats_screen.dart';
@@ -30,7 +33,23 @@ class StudentSpaceScreen extends StatelessWidget {
 
     return Scaffold(
       backgroundColor: LazouColors.background,
-      appBar: AppBar(title: const Text('Mon espace')),
+      appBar: AppBar(
+        title: const Text('Mon espace'),
+        actions: [
+          IconButton(
+            tooltip: 'Déconnexion',
+            icon: const Icon(Icons.logout),
+            onPressed: () async {
+              await context.read<AuthService>().deconnexion();
+              if (!context.mounted) return;
+              Navigator.of(context).pushAndRemoveUntil(
+                MaterialPageRoute(builder: (_) => const LoginScreen()),
+                (_) => false,
+              );
+            },
+          ),
+        ],
+      ),
       body: GridView.builder(
         padding: const EdgeInsets.all(16),
         gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(

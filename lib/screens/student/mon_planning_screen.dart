@@ -24,7 +24,13 @@ class MonPlanningScreen extends StatelessWidget {
       body: StreamBuilder<DocumentSnapshot<Map<String, dynamic>>>(
         stream: firestore.watchEtudiant(uid),
         builder: (context, profilSnap) {
+          if (profilSnap.hasError) {
+            return _ErreurDonnees(message: 'Impossible de charger ton profil. Vérifie ta connexion puis réessaie.');
+          }
           if (!profilSnap.hasData) return const Center(child: CircularProgressIndicator());
+          if (!profilSnap.data!.exists) {
+            return const _ErreurDonnees(message: 'Ton profil étudiant n\'existe pas encore. Contacte l\'administration.');
+          }
           final student = StudentProfile.fromDoc(profilSnap.data!);
 
           if (student.groupeId == null || student.groupeId!.isEmpty) {
@@ -43,9 +49,12 @@ class MonPlanningScreen extends StatelessWidget {
           return StreamBuilder<FormationGroup?>(
             stream: firestore.watchGroupe(student.groupeId!),
             builder: (context, snap) {
+              if (snap.hasError) {
+                return const _ErreurDonnees(message: 'Impossible de charger le planning. Vérifie les autorisations Firestore.');
+              }
               if (!snap.hasData) return const Center(child: CircularProgressIndicator());
               final groupe = snap.data;
-              if (groupe == null) return const Center(child: Text('Groupe introuvable.'));
+              if (groupe == null) return const _ErreurDonnees(message: 'Groupe introuvable. Contacte l\'administration.');
 
               return Padding(
                 padding: const EdgeInsets.all(20),
@@ -97,6 +106,29 @@ class _LigneInfo extends StatelessWidget {
         leading: Icon(icon, color: LazouColors.primary),
         title: Text(label, style: const TextStyle(color: LazouColors.textSecondary, fontSize: 12)),
         subtitle: Text(valeur, style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 15)),
+      ),
+    );
+  }
+}
+
+
+class _ErreurDonnees extends StatelessWidget {
+  final String message;
+  const _ErreurDonnees({required this.message});
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(28),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Icon(Icons.cloud_off_outlined, size: 48, color: LazouColors.error),
+            const SizedBox(height: 12),
+            Text(message, textAlign: TextAlign.center),
+          ],
+        ),
       ),
     );
   }

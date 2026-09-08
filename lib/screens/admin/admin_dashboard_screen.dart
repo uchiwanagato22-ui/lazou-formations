@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import '../../services/auth_service.dart';
 import '../../services/firestore_service.dart';
 import '../../theme/app_theme.dart';
+import '../auth/login_screen.dart';
 import '../../widgets/animations.dart';
 import 'admin_formations_screen.dart';
 import 'admin_inscriptions_screen.dart';
@@ -44,7 +45,7 @@ class AdminDashboardScreen extends StatelessWidget {
               IconButton(
                 tooltip: 'Déconnexion',
                 icon: const Icon(Icons.logout),
-                onPressed: () => auth.deconnexion(),
+                onPressed: () async { await auth.deconnexion(); if (!context.mounted) return; Navigator.of(context).pushAndRemoveUntil(MaterialPageRoute(builder: (_) => const LoginScreen()), (_) => false); },
               ),
             ],
             flexibleSpace: FlexibleSpaceBar(

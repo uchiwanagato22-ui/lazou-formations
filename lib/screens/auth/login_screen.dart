@@ -4,6 +4,7 @@ import '../../services/auth_service.dart';
 import '../../theme/app_theme.dart';
 import 'signup_screen.dart';
 import 'staff_login_screen.dart';
+import '../student_space_screen.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -30,16 +31,34 @@ class _LoginScreenState extends State<LoginScreen> {
     setState(() => _erreur = null);
     final auth = context.read<AuthService>();
     final erreur = await auth.connexion(email: _email.text.trim(), motDePasse: _motDePasse.text);
-    if (erreur != null && mounted) setState(() => _erreur = erreur);
-    // Si succès, authStateChanges() dans AuthService notifie et l'écran
-    // racine (voir main.dart) bascule automatiquement vers le bon espace.
+    if (!mounted) return;
+    if (erreur != null) {
+      setState(() => _erreur = erreur);
+      return;
+    }
+
+    // Le login peut être ouvert depuis l'onglet "Mon espace", donc le
+    // RootRouter n'est pas forcément dans la pile active. On remplace toute
+    // la pile pour éviter que l'utilisateur doive appuyer sur Retour.
+    Navigator.of(context).pushAndRemoveUntil(
+      MaterialPageRoute(builder: (_) => const StudentSpaceScreen()),
+      (_) => false,
+    );
   }
 
   Future<void> _seConnecterGoogle() async {
     setState(() => _erreur = null);
     final auth = context.read<AuthService>();
     final erreur = await auth.connexionGoogle();
-    if (erreur != null && mounted) setState(() => _erreur = erreur);
+    if (!mounted) return;
+    if (erreur != null) {
+      setState(() => _erreur = erreur);
+      return;
+    }
+    Navigator.of(context).pushAndRemoveUntil(
+      MaterialPageRoute(builder: (_) => const StudentSpaceScreen()),
+      (_) => false,
+    );
   }
 
   @override

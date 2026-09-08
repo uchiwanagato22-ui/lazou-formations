@@ -27,12 +27,30 @@ class MesPaiementsScreen extends StatelessWidget {
       body: StreamBuilder<DocumentSnapshot<Map<String, dynamic>>>(
         stream: firestore.watchEtudiant(uid),
         builder: (context, profilSnap) {
+          if (profilSnap.hasError) {
+            return const Center(child: Padding(
+              padding: EdgeInsets.all(28),
+              child: Text('Impossible de charger ton profil. Vérifie ta connexion puis réessaie.', textAlign: TextAlign.center),
+            ));
+          }
           if (!profilSnap.hasData) return const Center(child: CircularProgressIndicator());
+          if (!profilSnap.data!.exists) {
+            return const Center(child: Padding(
+              padding: EdgeInsets.all(28),
+              child: Text('Profil étudiant introuvable. Contacte l\'administration.', textAlign: TextAlign.center),
+            ));
+          }
           final student = StudentProfile.fromDoc(profilSnap.data!);
 
           return StreamBuilder<List<Paiement>>(
             stream: firestore.watchPaiementsEtudiant(uid),
             builder: (context, snapshot) {
+              if (snapshot.hasError) {
+                return Center(child: Padding(
+                  padding: const EdgeInsets.all(28),
+                  child: Text('Impossible de charger les paiements. Vérifie ta connexion ou les règles d\'accès.', textAlign: TextAlign.center),
+                ));
+              }
               final paiements = snapshot.data ?? [];
               final paye = paiements.fold<double>(0, (t, p) => t + p.montant);
               final reste = (student.montantDu - paye).clamp(0, double.infinity);

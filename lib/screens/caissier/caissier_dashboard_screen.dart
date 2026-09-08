@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../services/auth_service.dart';
 import '../admin/paiements_screen.dart';
+import '../auth/login_screen.dart';
 
 /// Le caissier n'a accès qu'aux paiements — pas aux notes, pas aux
 /// formations, pas aux dossiers étudiants complets. On réutilise
@@ -20,7 +21,7 @@ class CaissierDashboardScreen extends StatelessWidget {
       floatingActionButton: FloatingActionButton.small(
         heroTag: 'deconnexion_caissier',
         backgroundColor: Colors.grey.shade700,
-        onPressed: () => context.read<AuthService>().deconnexion(),
+        onPressed: () async { await context.read<AuthService>().deconnexion(); if (!context.mounted) return; Navigator.of(context).pushAndRemoveUntil(MaterialPageRoute(builder: (_) => const LoginScreen()), (_) => false); },
         child: const Icon(Icons.logout, size: 18),
       ),
       floatingActionButtonLocation: FloatingActionButtonLocation.startFloat,

@@ -55,7 +55,13 @@ class AuthService extends ChangeNotifier {
     _loading = true;
     notifyListeners();
     try {
-      await _auth.signInWithEmailAndPassword(email: email, password: motDePasse);
+      final credentials = await _auth.signInWithEmailAndPassword(
+        email: email,
+        password: motDePasse,
+      );
+      // Charger le rôle avant de rendre la main à l'écran de connexion.
+      // Cela permet à l'interface de rediriger immédiatement vers le bon espace.
+      await _chargerRole(credentials.user!.uid);
       return null; // succès
     } on FirebaseAuthException catch (e) {
       return _messageErreur(e.code);
@@ -121,6 +127,7 @@ class AuthService extends ChangeNotifier {
           'creeLe': FieldValue.serverTimestamp(),
         });
       }
+      await _chargerRole(result.user!.uid);
       return null;
     } on FirebaseAuthException catch (e) {
       return _messageErreur(e.code);
@@ -154,7 +161,12 @@ class AuthService extends ChangeNotifier {
         return 'Code incorrect.';
       }
       final data = jsonDecode(reponse.body) as Map<String, dynamic>;
-      await _auth.signInWithCustomToken(data['token'] as String);
+      final token = data['token'];
+      if (token is! String || token.isEmpty) {
+        return 'Réponse de connexion invalide.';
+      }
+      final credentials = await _auth.signInWithCustomToken(token);
+      await _chargerRole(credentials.user!.uid);
       return null;
     } catch (_) {
       return 'Connexion impossible. Vérifie ta connexion internet.';

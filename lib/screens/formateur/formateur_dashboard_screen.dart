@@ -4,6 +4,7 @@ import '../../services/auth_service.dart';
 import '../../services/firestore_service.dart';
 import '../../models/group_model.dart';
 import '../../theme/app_theme.dart';
+import '../auth/login_screen.dart';
 import '../../widgets/animations.dart';
 import '../admin/attendance_screen.dart';
 import 'evaluations_screen.dart';
@@ -37,7 +38,7 @@ class FormateurDashboardScreen extends StatelessWidget {
                     IconButton(
                       tooltip: 'Déconnexion',
                       icon: const Icon(Icons.logout),
-                      onPressed: () => auth.deconnexion(),
+                      onPressed: () async { await auth.deconnexion(); if (!context.mounted) return; Navigator.of(context).pushAndRemoveUntil(MaterialPageRoute(builder: (_) => const LoginScreen()), (_) => false); },
                     ),
                   ],
                   flexibleSpace: FlexibleSpaceBar(
