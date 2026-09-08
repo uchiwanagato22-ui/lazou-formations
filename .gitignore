@@ -10,9 +10,6 @@ build/
 
 # Fichiers générés par flutterfire configure — CONTIENNENT DES CLÉS,
 # ne jamais commit publiquement si le repo est public un jour.
-lib/firebase_options.dart
-android/app/google-services.json
-ios/Runner/GoogleService-Info.plist
 
 # IDE
 .idea/
