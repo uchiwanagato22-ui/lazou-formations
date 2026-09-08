@@ -12,6 +12,7 @@ class LazouColors {
   static const background = Color(0xFFF7F8FA);
   static const surface = Colors.white;
   static const success = Color(0xFF2E7D32);
+  static const warning = Color(0xFFF7A600); // même orange que secondary, sémantique différente
   static const error = Color(0xFFC62828);
   static const textPrimary = Color(0xFF1A1A1A);
   static const textSecondary = Color(0xFF6B7280);
