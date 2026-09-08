@@ -8,6 +8,7 @@ import '../../services/auth_service.dart';
 import '../../services/cloudinary_service.dart';
 import '../../services/firestore_service.dart';
 import '../../theme/app_theme.dart';
+import '../../widgets/empty_state.dart';
 
 class CoursScreen extends StatefulWidget {
   const CoursScreen({super.key});
@@ -39,7 +40,7 @@ class _CoursScreenState extends State<CoursScreen> {
               label: Text(_uploadEnCours ? 'Envoi en cours...' : 'Publier un fichier'),
             ),
       body: uid == null
-          ? const Center(child: Text('Session introuvable.'))
+          ? const EmptyState(icon: Icons.inbox_outlined, message: 'Session introuvable.')
           : StreamBuilder<List<FormationGroup>>(
               stream: service.watchGroupes(),
               builder: (context, groupsSnap) {
@@ -48,7 +49,7 @@ class _CoursScreenState extends State<CoursScreen> {
                 }
                 var groupes = groupsSnap.data ?? [];
                 if (role == 'formateur') groupes = groupes.where((g) => g.formateurUid == uid).toList();
-                if (groupes.isEmpty) return const Center(child: Text('Aucun groupe disponible.'));
+                if (groupes.isEmpty) return const EmptyState(icon: Icons.groups_outlined, message: 'Aucun groupe disponible.');
                 _groupe ??= groupes.first;
                 if (!groupes.any((g) => g.id == _groupe!.id)) _groupe = groupes.first;
 
@@ -72,7 +73,7 @@ class _CoursScreenState extends State<CoursScreen> {
                             return const Center(child: CircularProgressIndicator());
                           }
                           if (materiaux.isEmpty) {
-                            return const Center(child: Text('Aucun support publié pour ce groupe.'));
+                            return const EmptyState(icon: Icons.groups_outlined, message: 'Aucun support publié pour ce groupe.');
                           }
                           return ListView.separated(
                             padding: const EdgeInsets.fromLTRB(16, 0, 16, 90),

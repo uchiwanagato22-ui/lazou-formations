@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../services/firestore_service.dart';
 import '../../theme/app_theme.dart';
+import '../../widgets/empty_state.dart';
 
 class AdminFormateursScreen extends StatelessWidget {
   const AdminFormateursScreen({super.key});
@@ -19,10 +20,10 @@ class AdminFormateursScreen extends StatelessWidget {
       body: StreamBuilder<List<Map<String, dynamic>>>(
         stream: firestore.watchFormateurs(),
         builder: (context, snapshot) {
-          if (snapshot.hasError) return Center(child: Text('Erreur : ${snapshot.error}'));
+          if (snapshot.hasError) return EmptyState(icon: Icons.inbox_outlined, message: 'Erreur : ${snapshot.error}');
           if (snapshot.connectionState == ConnectionState.waiting) return const Center(child: CircularProgressIndicator());
           final items = snapshot.data ?? [];
-          if (items.isEmpty) return const Center(child: Text('Aucun formateur pour le moment.'));
+          if (items.isEmpty) return const EmptyState(icon: Icons.badge_outlined, message: 'Aucun formateur pour le moment.');
           return ListView.separated(
             padding: const EdgeInsets.fromLTRB(16, 16, 16, 96),
             itemCount: items.length,

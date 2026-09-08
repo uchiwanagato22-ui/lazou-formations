@@ -6,6 +6,7 @@ import '../../models/user_role.dart';
 import '../../services/auth_service.dart';
 import '../../services/firestore_service.dart';
 import '../../theme/app_theme.dart';
+import '../../widgets/empty_state.dart';
 
 /// L'étudiant dit son matricule ("33842"), le formateur le tape, l'app
 /// affiche son nom pour confirmation, un tap sur Présent/Retard/Absent
@@ -74,7 +75,7 @@ class _PointageMatriculeScreenState extends State<PointageMatriculeScreen> {
     return Scaffold(
       appBar: AppBar(title: const Text('Pointage rapide')),
       body: uid == null
-          ? const Center(child: Text('Session introuvable.'))
+          ? const EmptyState(icon: Icons.inbox_outlined, message: 'Session introuvable.')
           : StreamBuilder<List<FormationGroup>>(
               stream: service.watchGroupes(),
               builder: (context, groupsSnap) {
@@ -86,7 +87,7 @@ class _PointageMatriculeScreenState extends State<PointageMatriculeScreen> {
                   return const Center(child: CircularProgressIndicator());
                 }
                 if (groupes.isEmpty) {
-                  return const Center(child: Text('Aucun groupe disponible.'));
+                  return const EmptyState(icon: Icons.groups_outlined, message: 'Aucun groupe disponible.');
                 }
                 _groupe ??= groupes.first;
                 if (!groupes.any((g) => g.id == _groupe!.id)) _groupe = groupes.first;

@@ -8,6 +8,7 @@ import '../../theme/app_theme.dart';
 import 'paiements_screen.dart';
 import '../../models/certificate_model.dart';
 import '../certificate_detail_screen.dart';
+import '../../widgets/empty_state.dart';
 
 class AdminStudentsScreen extends StatefulWidget {
   const AdminStudentsScreen({super.key});
@@ -54,7 +55,7 @@ class _AdminStudentsScreenState extends State<AdminStudentsScreen> {
                       .toLowerCase().contains(_recherche);
                 }).toList();
                 if (students.isEmpty) {
-                  return const Center(child: Text('Aucun étudiant trouvé.'));
+                  return const EmptyState(icon: Icons.people_outline, message: 'Aucun étudiant trouvé.');
                 }
                 return ListView.separated(
                   padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
@@ -141,7 +142,7 @@ class AdminStudentDetailScreen extends StatelessWidget {
             return const Center(child: CircularProgressIndicator());
           }
           if (!snapshot.hasData || !snapshot.data!.exists) {
-            return const Center(child: Text('Étudiant introuvable.'));
+            return const EmptyState(icon: Icons.people_outline, message: 'Étudiant introuvable.');
           }
           final student = StudentProfile.fromDoc(snapshot.data!);
           return ListView(

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../models/expense_model.dart';
 import '../../services/firestore_service.dart';
+import '../../widgets/empty_state.dart';
 
 class DepensesScreen extends StatelessWidget {
   const DepensesScreen({super.key});
@@ -20,7 +21,7 @@ class DepensesScreen extends StatelessWidget {
           return ListView(padding: const EdgeInsets.all(16), children: [
             Card(child: Padding(padding: const EdgeInsets.all(18), child: Row(children: [const Icon(Icons.account_balance_wallet_outlined), const SizedBox(width: 12), Column(crossAxisAlignment: CrossAxisAlignment.start, children: [const Text('Total enregistré'), Text('${total.toStringAsFixed(0)} MRU', style: const TextStyle(fontSize: 26, fontWeight: FontWeight.w900))])]))),
             const SizedBox(height: 12),
-            if (items.isEmpty) const Card(child: Padding(padding: EdgeInsets.all(24), child: Center(child: Text('Aucune dépense enregistrée.')))),
+            if (items.isEmpty) const Card(child: Padding(padding: EdgeInsets.all(24), child: EmptyState(icon: Icons.request_quote_outlined, message: 'Aucune dépense enregistrée.'))),
             ...items.map((e) => Card(child: ListTile(leading: const CircleAvatar(child: Icon(Icons.receipt_long_outlined)), title: Text(e.libelle, style: const TextStyle(fontWeight: FontWeight.w700)), subtitle: Text('${e.categorie.label}${e.note?.isNotEmpty == true ? ' · ${e.note}' : ''}'), trailing: Text('${e.montant.toStringAsFixed(0)} MRU', style: const TextStyle(fontWeight: FontWeight.w800))))),
           ]);
         },

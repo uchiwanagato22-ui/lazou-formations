@@ -4,6 +4,7 @@ import '../../models/formation.dart';
 import '../../models/group_model.dart';
 import '../../services/firestore_service.dart';
 import '../../theme/app_theme.dart';
+import '../../widgets/empty_state.dart';
 
 class AdminGroupsScreen extends StatelessWidget {
   const AdminGroupsScreen({super.key});
@@ -21,10 +22,10 @@ class AdminGroupsScreen extends StatelessWidget {
       body: StreamBuilder<List<FormationGroup>>(
         stream: service.watchGroupes(),
         builder: (context, snapshot) {
-          if (snapshot.hasError) return Center(child: Text('Erreur : ${snapshot.error}'));
+          if (snapshot.hasError) return EmptyState(icon: Icons.inbox_outlined, message: 'Erreur : ${snapshot.error}');
           if (snapshot.connectionState == ConnectionState.waiting) return const Center(child: CircularProgressIndicator());
           final groups = snapshot.data ?? [];
-          if (groups.isEmpty) return const Center(child: Text('Aucun groupe créé.'));
+          if (groups.isEmpty) return const EmptyState(icon: Icons.groups_outlined, message: 'Aucun groupe créé.');
           return ListView.separated(
             padding: const EdgeInsets.fromLTRB(16, 16, 16, 96),
             itemCount: groups.length,

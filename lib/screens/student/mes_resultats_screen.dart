@@ -6,6 +6,7 @@ import '../../models/student_profile.dart';
 import '../../services/auth_service.dart';
 import '../../services/firestore_service.dart';
 import '../../theme/app_theme.dart';
+import '../../widgets/empty_state.dart';
 
 class MesResultatsScreen extends StatelessWidget {
   const MesResultatsScreen({super.key});
@@ -16,7 +17,7 @@ class MesResultatsScreen extends StatelessWidget {
     final firestore = context.read<FirestoreService>();
 
     if (uid == null) {
-      return const Scaffold(body: Center(child: Text('Connecte-toi pour voir tes résultats.')));
+      return const Scaffold(body: EmptyState(icon: Icons.inbox_outlined, message: 'Connecte-toi pour voir tes résultats.'));
     }
 
     return Scaffold(

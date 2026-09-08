@@ -7,6 +7,7 @@ import '../../models/user_role.dart';
 import '../../services/auth_service.dart';
 import '../../services/firestore_service.dart';
 import '../../theme/app_theme.dart';
+import '../../widgets/empty_state.dart';
 
 /// Même schéma que l'écran Présences : sélection d'un groupe (filtré sur
 /// le formateur connecté), puis liste des évaluations de ce groupe.
@@ -36,7 +37,7 @@ class _EvaluationsScreenState extends State<EvaluationsScreen> {
               label: const Text('Nouvelle évaluation'),
             ),
       body: uid == null
-          ? const Center(child: Text('Session introuvable.'))
+          ? const EmptyState(icon: Icons.inbox_outlined, message: 'Session introuvable.')
           : StreamBuilder<List<FormationGroup>>(
               stream: service.watchGroupes(),
               builder: (context, groupsSnap) {
@@ -46,7 +47,7 @@ class _EvaluationsScreenState extends State<EvaluationsScreen> {
                 var groupes = groupsSnap.data ?? [];
                 if (role == 'formateur') groupes = groupes.where((g) => g.formateurUid == uid).toList();
                 if (groupes.isEmpty) {
-                  return const Center(child: Text('Aucun groupe disponible.'));
+                  return const EmptyState(icon: Icons.groups_outlined, message: 'Aucun groupe disponible.');
                 }
                 _groupe ??= groupes.first;
                 if (!groupes.any((g) => g.id == _groupe!.id)) _groupe = groupes.first;
@@ -71,7 +72,7 @@ class _EvaluationsScreenState extends State<EvaluationsScreen> {
                           }
                           final evaluations = evalSnap.data ?? [];
                           if (evaluations.isEmpty) {
-                            return const Center(child: Text('Aucune évaluation pour ce groupe — crée-en une.'));
+                            return const EmptyState(icon: Icons.groups_outlined, message: 'Aucune évaluation pour ce groupe — crée-en une.');
                           }
                           return ListView.separated(
                             padding: const EdgeInsets.fromLTRB(16, 0, 16, 90),
@@ -173,7 +174,7 @@ class _SaisieNotesScreenState extends State<_SaisieNotesScreen> {
           }
           final etudiants = snapshot.data ?? [];
           if (etudiants.isEmpty) {
-            return const Center(child: Text('Aucun étudiant dans ce groupe.'));
+            return const EmptyState(icon: Icons.groups_outlined, message: 'Aucun étudiant dans ce groupe.');
           }
           for (final e in etudiants) {
             _controllers.putIfAbsent(

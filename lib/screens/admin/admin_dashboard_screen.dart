@@ -21,6 +21,7 @@ import '../formateur/evaluations_screen.dart';
 import '../formateur/cours_screen.dart';
 import '../formateur/ma_classe_screen.dart';
 import '../formateur/pointage_matricule_screen.dart';
+import '../formateur/suivi_paiements_screen.dart';
 
 class AdminDashboardScreen extends StatelessWidget {
   const AdminDashboardScreen({super.key});
@@ -28,132 +29,344 @@ class AdminDashboardScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final firestore = context.read<FirestoreService>();
+    final auth = context.watch<AuthService>();
+
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Administration Lazou'),
-        actions: [
-          IconButton(
-            tooltip: 'Déconnexion',
-            icon: const Icon(Icons.logout),
-            onPressed: () => context.read<AuthService>().deconnexion(),
-          ),
-        ],
-      ),
-      body: ListView(
-        padding: const EdgeInsets.fromLTRB(16, 16, 16, 28),
-        children: [
-          const Text('Centre de contrôle', style: TextStyle(fontSize: 24, fontWeight: FontWeight.w900)),
-          const SizedBox(height: 4),
-          const Text('Pilote les étudiants, formations et inscriptions depuis un seul endroit.', style: TextStyle(color: LazouColors.textSecondary)),
-          const SizedBox(height: 18),
-          StreamBuilder<int>(
-            stream: firestore.watchNombreEtudiants(),
-            builder: (_, s) => _MetricCard(icon: Icons.people_outline, label: 'Étudiants', value: '${s.data ?? 0}', onTap: () => _open(context, const AdminStudentsScreen())),
-          ),
-          const SizedBox(height: 10),
-          Row(children: [
-            Expanded(child: StreamBuilder<int>(stream: firestore.watchNombreFormateurs(), builder: (_, s) => _SmallMetric(icon: Icons.badge_outlined, label: 'Formateurs', value: '${s.data ?? 0}'))),
-            const SizedBox(width: 10),
-            Expanded(child: StreamBuilder<int>(stream: firestore.watchNombreInscriptionsEnAttente(), builder: (_, s) => _SmallMetric(icon: Icons.pending_actions_outlined, label: 'À valider', value: '${s.data ?? 0}'))),
-          ]),
-          const SizedBox(height: 10),
-          Row(children: [
-            Expanded(child: StreamBuilder<double>(stream: firestore.watchEncaisseAujourdHui(), builder: (_, s) => _SmallMetric(icon: Icons.today_outlined, label: "Aujourd'hui", value: '${(s.data ?? 0).toStringAsFixed(0)} MRU'))),
-            const SizedBox(width: 10),
-            Expanded(child: StreamBuilder<double>(stream: firestore.watchEncaisseMoisCourant(), builder: (_, s) => _SmallMetric(icon: Icons.calendar_month_outlined, label: 'Ce mois', value: '${(s.data ?? 0).toStringAsFixed(0)} MRU'))),
-          ]),
-          const SizedBox(height: 10),
-          StreamBuilder<int>(
-            stream: firestore.watchNombreEtudiantsEnImpayes(),
-            builder: (_, s) => Card(
-              child: ListTile(
-                leading: CircleAvatar(backgroundColor: LazouColors.warning.withValues(alpha: .12), child: const Icon(Icons.warning_amber_rounded, color: LazouColors.warning)),
-                title: const Text('Étudiants avec solde restant', style: TextStyle(fontWeight: FontWeight.w700)),
-                subtitle: const Text('À suivre dans le module de recouvrement'),
-                trailing: Text('${s.data ?? 0}', style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w900)),
-                onTap: () => _open(context, const ImpayesScreen()),
+      backgroundColor: LazouColors.background,
+      body: CustomScrollView(
+        slivers: [
+          SliverAppBar(
+            pinned: true,
+            expandedHeight: 210,
+            backgroundColor: LazouColors.primary,
+            foregroundColor: Colors.white,
+            actions: [
+              IconButton(
+                tooltip: 'Déconnexion',
+                icon: const Icon(Icons.logout),
+                onPressed: () => auth.deconnexion(),
               ),
+            ],
+            flexibleSpace: FlexibleSpaceBar(
+              background: _HeroHeader(nom: auth.user?.email?.split('@').first),
             ),
           ),
-          const SizedBox(height: 18),
-          const Text('Gestion du centre', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800)),
-          const SizedBox(height: 10),
-          _AdminCard(icon: Icons.people_outline, label: 'Étudiants', description: 'Dossiers, formations et groupes', builder: () => const AdminStudentsScreen()),
-          _AdminCard(icon: Icons.badge_outlined, label: 'Formateurs', description: 'Équipe pédagogique et affectations', builder: () => const AdminFormateursScreen()),
-          _AdminCard(icon: Icons.menu_book_outlined, label: 'Formations', description: 'Catalogue, programmes et tarifs', builder: () => const AdminFormationsScreen()),
-          _AdminCard(icon: Icons.how_to_reg_outlined, label: 'Inscriptions', description: 'Demandes à valider', builder: () => const AdminInscriptionsScreen()),
-          _AdminCard(icon: Icons.event_available_outlined, label: 'Sessions & groupes', description: 'Planning, salles et affectations', builder: () => const AdminGroupsScreen()),
-          _AdminCard(icon: Icons.fact_check_outlined, label: 'Présences', description: 'Suivi quotidien des étudiants', builder: () => const AttendanceScreen()),
-          _AdminCard(icon: Icons.payments_outlined, label: 'Paiements', description: 'Encaissements et historique', builder: () => const PaiementsScreen()),
-          _AdminCard(icon: Icons.account_balance_wallet_outlined, label: 'Recouvrement', description: 'Impayés et soldes à récupérer', builder: () => const ImpayesScreen()),
-          _AdminCard(icon: Icons.person_search_outlined, label: 'Prospects', description: 'Suivre les demandes avant inscription', builder: () => const ProspectsScreen()),
-          _AdminCard(icon: Icons.receipt_long_outlined, label: 'Dépenses', description: 'Charges du centre et rentabilité', builder: () => const DepensesScreen()),
-          _AdminCard(icon: Icons.workspace_premium_outlined, label: 'Certificats', description: 'Émission et vérification', builder: () => const AdminCertificatsScreen()),
-          _AdminCard(icon: Icons.bar_chart_outlined, label: 'Statistiques', description: 'Activité et performance du centre', builder: () => const StatistiquesScreen()),
-          _AdminCard(icon: Icons.assignment_outlined, label: 'Évaluations & notes', description: 'Tous les groupes, tous les formateurs', builder: () => const EvaluationsScreen()),
-          _AdminCard(icon: Icons.campaign_outlined, label: 'Annonces', description: 'Publier à n\'importe quel groupe', builder: () => const AnnoncesScreen()),
-          _AdminCard(icon: Icons.groups_outlined, label: 'Classes & matricules', description: 'Voir chaque groupe, saisir les matricules', builder: () => const MaClasseScreen()),
-          _AdminCard(icon: Icons.badge_outlined, label: 'Pointage rapide', description: 'Marquer une présence par matricule', builder: () => const PointageMatriculeScreen()),
-          _AdminCard(icon: Icons.folder_open_outlined, label: 'Cours & supports', description: 'Publier des fichiers pour tous les groupes', builder: () => const CoursScreen()),
+          SliverToBoxAdapter(
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(16, 16, 16, 4),
+              child: _MetricsGrid(firestore: firestore),
+            ),
+          ),
+          SliverToBoxAdapter(
+            child: StreamBuilder<int>(
+              stream: firestore.watchNombreEtudiantsEnImpayes(),
+              builder: (_, s) {
+                final n = s.data ?? 0;
+                if (n == 0) return const SizedBox.shrink();
+                return Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 10, 16, 0),
+                  child: TapScale(
+                    onTap: () => _open(context, const ImpayesScreen()),
+                    child: Card(
+                      color: LazouColors.warning.withValues(alpha: .10),
+                      elevation: 0,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(16),
+                        side: BorderSide(color: LazouColors.warning.withValues(alpha: .35)),
+                      ),
+                      child: Padding(
+                        padding: const EdgeInsets.all(14),
+                        child: Row(
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.all(10),
+                              decoration: BoxDecoration(color: LazouColors.warning.withValues(alpha: .18), shape: BoxShape.circle),
+                              child: const Icon(Icons.warning_amber_rounded, color: LazouColors.warning),
+                            ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text('$n étudiant${n > 1 ? 's' : ''} avec un solde restant',
+                                      style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 13.5)),
+                                  const Text('Ouvrir le recouvrement', style: TextStyle(color: LazouColors.textSecondary, fontSize: 12)),
+                                ],
+                              ),
+                            ),
+                            const Icon(Icons.chevron_right, color: LazouColors.textSecondary),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                );
+              },
+            ),
+          ),
+          SliverPadding(
+            padding: const EdgeInsets.fromLTRB(16, 22, 16, 32),
+            sliver: SliverList(
+              delegate: SliverChildListDelegate([
+                _CategorySection(
+                  titre: 'Étudiants & pédagogie',
+                  icone: Icons.school_outlined,
+                  tuiles: [
+                    _Tuile(Icons.people_outline, 'Étudiants', () => const AdminStudentsScreen()),
+                    _Tuile(Icons.badge_outlined, 'Formateurs', () => const AdminFormateursScreen()),
+                    _Tuile(Icons.menu_book_outlined, 'Formations', () => const AdminFormationsScreen()),
+                    _Tuile(Icons.event_available_outlined, 'Sessions & groupes', () => const AdminGroupsScreen()),
+                    _Tuile(Icons.groups_outlined, 'Classes & matricules', () => const MaClasseScreen()),
+                    _Tuile(Icons.fact_check_outlined, 'Présences', () => const AttendanceScreen()),
+                    _Tuile(Icons.badge, 'Pointage rapide', () => const PointageMatriculeScreen()),
+                    _Tuile(Icons.assignment_outlined, 'Évaluations & notes', () => const EvaluationsScreen()),
+                    _Tuile(Icons.folder_open_outlined, 'Cours & supports', () => const CoursScreen()),
+                  ],
+                ),
+                const SizedBox(height: 26),
+                _CategorySection(
+                  titre: 'Finances',
+                  icone: Icons.account_balance_wallet_outlined,
+                  tuiles: [
+                    _Tuile(Icons.payments_outlined, 'Paiements', () => const PaiementsScreen()),
+                    _Tuile(Icons.receipt_long_outlined, 'Suivi paiements', () => const SuiviPaiementsScreen()),
+                    _Tuile(Icons.account_balance_wallet_outlined, 'Recouvrement', () => const ImpayesScreen()),
+                    _Tuile(Icons.request_quote_outlined, 'Dépenses', () => const DepensesScreen()),
+                  ],
+                ),
+                const SizedBox(height: 26),
+                _CategorySection(
+                  titre: 'Croissance',
+                  icone: Icons.trending_up,
+                  tuiles: [
+                    _Tuile(Icons.how_to_reg_outlined, 'Inscriptions', () => const AdminInscriptionsScreen()),
+                    _Tuile(Icons.person_search_outlined, 'Prospects', () => const ProspectsScreen()),
+                  ],
+                ),
+                const SizedBox(height: 26),
+                _CategorySection(
+                  titre: 'Communication & bilan',
+                  icone: Icons.insights_outlined,
+                  tuiles: [
+                    _Tuile(Icons.campaign_outlined, 'Annonces', () => const AnnoncesScreen()),
+                    _Tuile(Icons.workspace_premium_outlined, 'Certificats', () => const AdminCertificatsScreen()),
+                    _Tuile(Icons.bar_chart_outlined, 'Statistiques', () => const StatistiquesScreen()),
+                  ],
+                ),
+              ]),
+            ),
+          ),
         ],
       ),
     );
   }
 
-  static void _open(BuildContext context, Widget screen) => Navigator.of(context).push(MaterialPageRoute(builder: (_) => screen));
+  static void _open(BuildContext context, Widget screen) {
+    Navigator.of(context).push(MaterialPageRoute(builder: (_) => screen));
+  }
 }
 
-class _MetricCard extends StatelessWidget {
+/// Bannière de tête façon "vrai dashboard" — dégradé + salutation, au lieu
+/// d'un simple titre noir sur fond blanc.
+class _HeroHeader extends StatelessWidget {
+  final String? nom;
+  const _HeroHeader({this.nom});
+
+  @override
+  Widget build(BuildContext context) {
+    final heure = DateTime.now().hour;
+    final salutation = heure < 12 ? 'Bonjour' : (heure < 18 ? 'Bon après-midi' : 'Bonsoir');
+    return Container(
+      decoration: const BoxDecoration(
+        gradient: LinearGradient(
+          colors: [LazouColors.primary, Color(0xFF14538F)],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+      ),
+      child: Stack(
+        children: [
+          Positioned(
+            right: -40,
+            top: -30,
+            child: Container(
+              width: 160,
+              height: 160,
+              decoration: BoxDecoration(shape: BoxShape.circle, color: Colors.white.withValues(alpha: .06)),
+            ),
+          ),
+          Positioned(
+            right: 30,
+            bottom: -30,
+            child: Container(
+              width: 90,
+              height: 90,
+              decoration: BoxDecoration(shape: BoxShape.circle, color: LazouColors.secondary.withValues(alpha: .16)),
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(20, 60, 20, 20),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisAlignment: MainAxisAlignment.end,
+              children: [
+                Text('$salutation ${nom != null && nom!.isNotEmpty ? nom : ''} 👋',
+                    style: const TextStyle(color: Colors.white70, fontSize: 14, fontWeight: FontWeight.w600)),
+                const SizedBox(height: 4),
+                const Text('Centre de contrôle',
+                    style: TextStyle(color: Colors.white, fontSize: 25, fontWeight: FontWeight.w900)),
+                const SizedBox(height: 4),
+                const Text('Étudiants, finances et pédagogie, en un seul endroit.',
+                    style: TextStyle(color: Colors.white70, fontSize: 12.5)),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Les métriques clés en un bloc de cartes glassy sur fond blanc — plus
+/// scannable qu'une pile de lignes.
+class _MetricsGrid extends StatelessWidget {
+  final FirestoreService firestore;
+  const _MetricsGrid({required this.firestore});
+
+  @override
+  Widget build(BuildContext context) {
+    return GridView.count(
+      crossAxisCount: 2,
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
+      mainAxisSpacing: 10,
+      crossAxisSpacing: 10,
+      childAspectRatio: 1.55,
+      children: [
+        StreamBuilder<int>(
+          stream: firestore.watchNombreEtudiants(),
+          builder: (_, s) => _MiniStat(icon: Icons.people_outline, label: 'Étudiants', value: '${s.data ?? 0}', couleur: LazouColors.primary),
+        ),
+        StreamBuilder<int>(
+          stream: firestore.watchNombreFormateurs(),
+          builder: (_, s) => _MiniStat(icon: Icons.badge_outlined, label: 'Formateurs', value: '${s.data ?? 0}', couleur: LazouColors.primary),
+        ),
+        StreamBuilder<int>(
+          stream: firestore.watchNombreInscriptionsEnAttente(),
+          builder: (_, s) => _MiniStat(icon: Icons.pending_actions_outlined, label: 'À valider', value: '${s.data ?? 0}', couleur: LazouColors.secondary),
+        ),
+        StreamBuilder<double>(
+          stream: firestore.watchEncaisseMoisCourant(),
+          builder: (_, s) => _MiniStat(
+            icon: Icons.calendar_month_outlined,
+            label: 'Encaissé ce mois',
+            value: '${(s.data ?? 0).toStringAsFixed(0)} MRU',
+            couleur: LazouColors.success,
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _MiniStat extends StatelessWidget {
   final IconData icon;
   final String label;
   final String value;
-  final VoidCallback onTap;
-  const _MetricCard({required this.icon, required this.label, required this.value, required this.onTap});
+  final Color couleur;
+  const _MiniStat({required this.icon, required this.label, required this.value, required this.couleur});
+
   @override
-  Widget build(BuildContext context) => TapScale(
-        onTap: onTap,
-        child: Card(
-          child: Padding(padding: const EdgeInsets.all(18), child: Row(children: [
-            CircleAvatar(radius: 25, backgroundColor: LazouColors.primary.withValues(alpha: .12), child: Icon(icon, color: LazouColors.primary)),
-            const SizedBox(width: 14),
-            Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Text(value, style: const TextStyle(fontSize: 28, fontWeight: FontWeight.w900)), Text(label, style: const TextStyle(color: LazouColors.textSecondary))]),
-            const Spacer(), const Icon(Icons.chevron_right),
-          ])),
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: .04), blurRadius: 10, offset: const Offset(0, 3))],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            padding: const EdgeInsets.all(7),
+            decoration: BoxDecoration(color: couleur.withValues(alpha: .12), borderRadius: BorderRadius.circular(9)),
+            child: Icon(icon, color: couleur, size: 18),
+          ),
+          const Spacer(),
+          Text(value, style: const TextStyle(fontSize: 19, fontWeight: FontWeight.w900), maxLines: 1, overflow: TextOverflow.ellipsis),
+          Text(label, style: const TextStyle(fontSize: 11, color: LazouColors.textSecondary), maxLines: 1, overflow: TextOverflow.ellipsis),
+        ],
+      ),
+    );
+  }
+}
+
+/// Une section = un titre + une grille 2 colonnes de tuiles compactes.
+/// Remplace la liste plate de 17 lignes identiques par un vrai classement.
+class _CategorySection extends StatelessWidget {
+  final String titre;
+  final IconData icone;
+  final List<_Tuile> tuiles;
+  const _CategorySection({required this.titre, required this.icone, required this.tuiles});
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Icon(icone, size: 17, color: LazouColors.secondary),
+            const SizedBox(width: 6),
+            Text(titre, style: const TextStyle(fontSize: 14.5, fontWeight: FontWeight.w800, letterSpacing: .2)),
+          ],
         ),
-      );
+        const SizedBox(height: 10),
+        GridView.count(
+          crossAxisCount: 2,
+          shrinkWrap: true,
+          physics: const NeverScrollableScrollPhysics(),
+          mainAxisSpacing: 10,
+          crossAxisSpacing: 10,
+          childAspectRatio: 1.5,
+          children: tuiles,
+        ),
+      ],
+    );
+  }
 }
 
-class _SmallMetric extends StatelessWidget {
-  final IconData icon; final String label; final String value;
-  const _SmallMetric({required this.icon, required this.label, required this.value});
-  @override
-  Widget build(BuildContext context) => Card(child: Padding(padding: const EdgeInsets.all(14), child: Row(children: [Icon(icon, color: LazouColors.primary), const SizedBox(width: 10), Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Text(value, style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w900)), Text(label, style: const TextStyle(fontSize: 12, color: LazouColors.textSecondary))]))])));
-}
-
-class _AdminCard extends StatelessWidget {
+class _Tuile extends StatelessWidget {
   final IconData icon;
   final String label;
-  final String description;
-  final Widget Function()? builder;
-  const _AdminCard({required this.icon, required this.label, required this.description, this.builder});
+  final Widget Function() builder;
+  const _Tuile(this.icon, this.label, this.builder);
 
   @override
-  Widget build(BuildContext context) => TapScale(
-        onTap: () {
-          if (builder != null) {
-            Navigator.of(context).push(MaterialPageRoute(builder: (_) => builder!()));
-          } else {
-            ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('$label sera branché sur Firebase dans la prochaine étape.')));
-          }
-        },
-        child: Card(
-          margin: const EdgeInsets.only(bottom: 10),
-          child: ListTile(
-            leading: CircleAvatar(backgroundColor: LazouColors.primary.withValues(alpha: .10), child: Icon(icon, color: LazouColors.primary)),
-            title: Text(label, style: const TextStyle(fontWeight: FontWeight.w700)),
-            subtitle: Text(description),
-            trailing: const Icon(Icons.chevron_right),
-          ),
+  Widget build(BuildContext context) {
+    return TapScale(
+      onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => builder())),
+      child: Container(
+        padding: const EdgeInsets.all(14),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: const Color(0xFFEEF0F3)),
         ),
-      );
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(color: LazouColors.primary.withValues(alpha: .08), borderRadius: BorderRadius.circular(10)),
+              child: Icon(icon, color: LazouColors.primary, size: 19),
+            ),
+            const Spacer(),
+            Text(label, style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 12.5), maxLines: 2, overflow: TextOverflow.ellipsis),
+          ],
+        ),
+      ),
+    );
+  }
 }

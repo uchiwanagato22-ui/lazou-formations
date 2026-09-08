@@ -47,90 +47,144 @@ class _LoginScreenState extends State<LoginScreen> {
     final auth = context.watch<AuthService>();
 
     return Scaffold(
-      body: SafeArea(
-        child: Center(
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.all(24),
-            child: Form(
-              key: _formKey,
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  const Icon(Icons.school, size: 56, color: LazouColors.primary),
-                  const SizedBox(height: 12),
-                  const Text(
-                    'LAZOU Formations',
-                    textAlign: TextAlign.center,
-                    style: TextStyle(fontSize: 22, fontWeight: FontWeight.w800),
-                  ),
-                  const SizedBox(height: 32),
-                  TextFormField(
-                    controller: _email,
-                    decoration: const InputDecoration(labelText: 'Email'),
-                    keyboardType: TextInputType.emailAddress,
-                    validator: (v) => (v == null || v.trim().isEmpty) ? 'Champ requis' : null,
-                  ),
-                  const SizedBox(height: 14),
-                  TextFormField(
-                    controller: _motDePasse,
-                    decoration: const InputDecoration(labelText: 'Mot de passe'),
-                    obscureText: true,
-                    validator: (v) => (v == null || v.isEmpty) ? 'Champ requis' : null,
-                  ),
-                  if (_erreur != null) ...[
-                    const SizedBox(height: 12),
-                    Text(_erreur!, style: const TextStyle(color: LazouColors.error, fontSize: 13)),
-                  ],
-                  const SizedBox(height: 24),
-                  ElevatedButton(
-                    onPressed: auth.loading ? null : _seConnecter,
-                    child: auth.loading
-                        ? const SizedBox(
-                            height: 18,
-                            width: 18,
-                            child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
-                          )
-                        : const Text('Se connecter'),
-                  ),
-                  const SizedBox(height: 12),
-                  Row(
-                    children: [
-                      const Expanded(child: Divider()),
-                      Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 10),
-                        child: Text('ou', style: TextStyle(color: Colors.grey.shade600)),
-                      ),
-                      const Expanded(child: Divider()),
-                    ],
-                  ),
-                  const SizedBox(height: 12),
-                  OutlinedButton.icon(
-                    onPressed: auth.loading ? null : _seConnecterGoogle,
-                    icon: const Icon(Icons.g_mobiledata, size: 26),
-                    label: const Text('Continuer avec Google'),
-                  ),
-                  const SizedBox(height: 12),
-                  TextButton(
-                    onPressed: () => Navigator.of(context).push(
-                      MaterialPageRoute(builder: (_) => const SignupScreen()),
-                    ),
-                    child: const Text("Pas encore de compte ? S'inscrire"),
-                  ),
-                  const SizedBox(height: 4),
-                  TextButton(
-                    onPressed: () => Navigator.of(context).push(
-                      MaterialPageRoute(builder: (_) => const StaffLoginScreen()),
-                    ),
-                    child: Text(
-                      'Espace formateur / administration',
-                      style: TextStyle(color: Colors.grey.shade600, fontSize: 13),
-                    ),
-                  ),
-                ],
+      body: Container(
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            colors: [LazouColors.primary, Color(0xFF14538F)],
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+          ),
+        ),
+        child: Stack(
+          children: [
+            Positioned(
+              right: -50,
+              top: -40,
+              child: Container(
+                width: 200,
+                height: 200,
+                decoration: BoxDecoration(shape: BoxShape.circle, color: Colors.white.withValues(alpha: .06)),
               ),
             ),
-          ),
+            Positioned(
+              left: -60,
+              bottom: 40,
+              child: Container(
+                width: 160,
+                height: 160,
+                decoration: BoxDecoration(shape: BoxShape.circle, color: LazouColors.secondary.withValues(alpha: .12)),
+              ),
+            ),
+            SafeArea(
+              child: Center(
+                child: SingleChildScrollView(
+                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(18),
+                        decoration: BoxDecoration(color: Colors.white.withValues(alpha: .12), shape: BoxShape.circle),
+                        child: const Icon(Icons.school, size: 40, color: Colors.white),
+                      ),
+                      const SizedBox(height: 16),
+                      const Text(
+                        'LAZOU Formations',
+                        textAlign: TextAlign.center,
+                        style: TextStyle(fontSize: 22, fontWeight: FontWeight.w900, color: Colors.white),
+                      ),
+                      const Text(
+                        "Le monde des solutions d'excellence",
+                        textAlign: TextAlign.center,
+                        style: TextStyle(fontSize: 12.5, color: Colors.white70),
+                      ),
+                      const SizedBox(height: 28),
+                      Container(
+                        padding: const EdgeInsets.all(22),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(22),
+                          boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: .15), blurRadius: 30, offset: const Offset(0, 12))],
+                        ),
+                        child: Form(
+                          key: _formKey,
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
+                            children: [
+                              const Text('Connexion', style: TextStyle(fontSize: 17, fontWeight: FontWeight.w800)),
+                              const SizedBox(height: 18),
+                              TextFormField(
+                                controller: _email,
+                                decoration: const InputDecoration(labelText: 'Email', prefixIcon: Icon(Icons.mail_outline)),
+                                keyboardType: TextInputType.emailAddress,
+                                validator: (v) => (v == null || v.trim().isEmpty) ? 'Champ requis' : null,
+                              ),
+                              const SizedBox(height: 14),
+                              TextFormField(
+                                controller: _motDePasse,
+                                decoration: const InputDecoration(labelText: 'Mot de passe', prefixIcon: Icon(Icons.lock_outline)),
+                                obscureText: true,
+                                validator: (v) => (v == null || v.isEmpty) ? 'Champ requis' : null,
+                              ),
+                              if (_erreur != null) ...[
+                                const SizedBox(height: 12),
+                                Text(_erreur!, style: const TextStyle(color: LazouColors.error, fontSize: 13)),
+                              ],
+                              const SizedBox(height: 20),
+                              ElevatedButton(
+                                onPressed: auth.loading ? null : _seConnecter,
+                                child: auth.loading
+                                    ? const SizedBox(
+                                        height: 18,
+                                        width: 18,
+                                        child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                                      )
+                                    : const Text('Se connecter'),
+                              ),
+                              const SizedBox(height: 14),
+                              Row(
+                                children: [
+                                  Expanded(child: Divider(color: Colors.grey.shade300)),
+                                  Padding(
+                                    padding: const EdgeInsets.symmetric(horizontal: 10),
+                                    child: Text('ou', style: TextStyle(color: Colors.grey.shade500, fontSize: 12)),
+                                  ),
+                                  Expanded(child: Divider(color: Colors.grey.shade300)),
+                                ],
+                              ),
+                              const SizedBox(height: 14),
+                              OutlinedButton.icon(
+                                onPressed: auth.loading ? null : _seConnecterGoogle,
+                                icon: const Icon(Icons.g_mobiledata, size: 26),
+                                label: const Text('Continuer avec Google'),
+                              ),
+                              const SizedBox(height: 8),
+                              TextButton(
+                                onPressed: () => Navigator.of(context).push(
+                                  MaterialPageRoute(builder: (_) => const SignupScreen()),
+                                ),
+                                child: const Text("Pas encore de compte ? S'inscrire"),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 18),
+                      TextButton(
+                        onPressed: () => Navigator.of(context).push(
+                          MaterialPageRoute(builder: (_) => const StaffLoginScreen()),
+                        ),
+                        child: const Text(
+                          'Espace formateur / administration',
+                          style: TextStyle(color: Colors.white70, fontSize: 13),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ],
         ),
       ),
     );

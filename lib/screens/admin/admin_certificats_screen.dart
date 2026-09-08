@@ -6,6 +6,7 @@ import '../../services/auth_service.dart';
 import '../../services/firestore_service.dart';
 import '../../theme/app_theme.dart';
 import '../certificate_detail_screen.dart';
+import '../../widgets/empty_state.dart';
 
 class AdminCertificatsScreen extends StatelessWidget {
   const AdminCertificatsScreen({super.key});
@@ -29,7 +30,7 @@ class AdminCertificatsScreen extends StatelessWidget {
           }
           final certificats = snapshot.data ?? [];
           if (certificats.isEmpty) {
-            return const Center(child: Text('Aucun certificat délivré pour l\'instant.'));
+            return const EmptyState(icon: Icons.workspace_premium_outlined, message: 'Aucun certificat délivré pour l\'instant.');
           }
           return ListView.separated(
             padding: const EdgeInsets.fromLTRB(16, 16, 16, 88),

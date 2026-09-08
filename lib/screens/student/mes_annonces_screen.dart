@@ -6,6 +6,7 @@ import '../../models/student_profile.dart';
 import '../../services/auth_service.dart';
 import '../../services/firestore_service.dart';
 import '../../theme/app_theme.dart';
+import '../../widgets/empty_state.dart';
 
 class MesAnnoncesScreen extends StatelessWidget {
   const MesAnnoncesScreen({super.key});
@@ -16,7 +17,7 @@ class MesAnnoncesScreen extends StatelessWidget {
     final firestore = context.read<FirestoreService>();
 
     if (uid == null) {
-      return const Scaffold(body: Center(child: Text('Connecte-toi pour voir les annonces.')));
+      return const Scaffold(body: EmptyState(icon: Icons.campaign_outlined, message: 'Connecte-toi pour voir les annonces.'));
     }
 
     return Scaffold(

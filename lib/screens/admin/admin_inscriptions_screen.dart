@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import '../../models/group_model.dart';
 import '../../services/firestore_service.dart';
 import '../../theme/app_theme.dart';
+import '../../widgets/empty_state.dart';
 
 class AdminInscriptionsScreen extends StatelessWidget {
   const AdminInscriptionsScreen({super.key});
@@ -28,7 +29,7 @@ class AdminInscriptionsScreen extends StatelessWidget {
           }
           final docs = snapshot.data?.docs ?? [];
           if (docs.isEmpty) {
-            return const Center(child: Text('Aucune demande d\'inscription pour l\'instant.'));
+            return const EmptyState(icon: Icons.how_to_reg_outlined, message: 'Aucune demande d\'inscription pour l\'instant.');
           }
           return ListView.separated(
             padding: const EdgeInsets.all(16),

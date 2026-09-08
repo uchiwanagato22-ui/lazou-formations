@@ -7,6 +7,7 @@ import '../../models/student_profile.dart';
 import '../../services/auth_service.dart';
 import '../../services/firestore_service.dart';
 import '../../theme/app_theme.dart';
+import '../../widgets/empty_state.dart';
 
 class MesCoursScreen extends StatelessWidget {
   const MesCoursScreen({super.key});
@@ -17,7 +18,7 @@ class MesCoursScreen extends StatelessWidget {
     final firestore = context.read<FirestoreService>();
 
     if (uid == null) {
-      return const Scaffold(body: Center(child: Text('Connecte-toi pour voir tes cours.')));
+      return const Scaffold(body: EmptyState(icon: Icons.folder_open_outlined, message: 'Connecte-toi pour voir tes cours.'));
     }
 
     return Scaffold(

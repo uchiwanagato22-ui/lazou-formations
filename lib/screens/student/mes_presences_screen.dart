@@ -5,6 +5,7 @@ import '../../models/student_profile.dart';
 import '../../services/auth_service.dart';
 import '../../services/firestore_service.dart';
 import '../../theme/app_theme.dart';
+import '../../widgets/empty_state.dart';
 
 class MesPresencesScreen extends StatelessWidget {
   const MesPresencesScreen({super.key});
@@ -15,7 +16,7 @@ class MesPresencesScreen extends StatelessWidget {
     final firestore = context.read<FirestoreService>();
 
     if (uid == null) {
-      return const Scaffold(body: Center(child: Text('Connecte-toi pour voir tes présences.')));
+      return const Scaffold(body: EmptyState(icon: Icons.fact_check_outlined, message: 'Connecte-toi pour voir tes présences.'));
     }
 
     return Scaffold(
@@ -27,7 +28,7 @@ class MesPresencesScreen extends StatelessWidget {
           final student = StudentProfile.fromDoc(profilSnap.data!);
 
           if (student.groupeId == null || student.groupeId!.isEmpty) {
-            return const Center(child: Text('Pas encore de groupe — rien à afficher.'));
+            return const EmptyState(icon: Icons.groups_outlined, message: 'Pas encore de groupe — rien à afficher.');
           }
 
           return StreamBuilder<List<({DateTime date, String statut})>>(

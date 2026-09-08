@@ -6,6 +6,7 @@ import '../../services/auth_service.dart';
 import '../../services/firestore_service.dart';
 import '../../services/receipt_service.dart';
 import '../../theme/app_theme.dart';
+import '../../widgets/empty_state.dart';
 
 /// Écran commun admin/caissier — c'est le rôle qui décide de ce qui est
 /// accessible autour (voir CaissierDashboardScreen), pas cet écran lui-même.
@@ -62,7 +63,7 @@ class PaiementsScreen extends StatelessWidget {
                 }
                 final paiements = snapshot.data ?? [];
                 if (paiements.isEmpty) {
-                  return const Center(child: Text('Aucun paiement enregistré pour l\'instant.'));
+                  return const EmptyState(icon: Icons.payments_outlined, message: 'Aucun paiement enregistré pour l\'instant.');
                 }
                 return ListView.separated(
                   padding: const EdgeInsets.fromLTRB(16, 0, 16, 88),

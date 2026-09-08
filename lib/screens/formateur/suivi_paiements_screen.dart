@@ -7,6 +7,7 @@ import '../../models/user_role.dart';
 import '../../services/auth_service.dart';
 import '../../services/firestore_service.dart';
 import '../../theme/app_theme.dart';
+import '../../widgets/empty_state.dart';
 
 /// "Qui a payé, qui n'a pas payé" par groupe — la question de fin de mois.
 /// Lecture seule ici : l'encaissement reste sur PaiementsScreen (admin/caissier).
@@ -30,7 +31,7 @@ class _SuiviPaiementsScreenState extends State<SuiviPaiementsScreen> {
     return Scaffold(
       appBar: AppBar(title: const Text('Suivi des paiements')),
       body: uid == null
-          ? const Center(child: Text('Session introuvable.'))
+          ? const EmptyState(icon: Icons.inbox_outlined, message: 'Session introuvable.')
           : StreamBuilder<List<FormationGroup>>(
               stream: service.watchGroupes(),
               builder: (context, groupsSnap) {
@@ -41,7 +42,7 @@ class _SuiviPaiementsScreenState extends State<SuiviPaiementsScreen> {
                 if (groupsSnap.connectionState == ConnectionState.waiting) {
                   return const Center(child: CircularProgressIndicator());
                 }
-                if (groupes.isEmpty) return const Center(child: Text('Aucun groupe disponible.'));
+                if (groupes.isEmpty) return const EmptyState(icon: Icons.groups_outlined, message: 'Aucun groupe disponible.');
                 _groupe ??= groupes.first;
                 if (!groupes.any((g) => g.id == _groupe!.id)) _groupe = groupes.first;
 
@@ -66,7 +67,7 @@ class _SuiviPaiementsScreenState extends State<SuiviPaiementsScreen> {
                             return const Center(child: CircularProgressIndicator());
                           }
                           if (etudiants.isEmpty) {
-                            return const Center(child: Text('Aucun étudiant dans ce groupe.'));
+                            return const EmptyState(icon: Icons.groups_outlined, message: 'Aucun étudiant dans ce groupe.');
                           }
                           return ListView.separated(
                             padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
