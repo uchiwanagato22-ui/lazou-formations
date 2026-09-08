@@ -1,0 +1,47 @@
+{
+  "project_info": {
+    "project_number": "850251025594",
+    "project_id": "lazou-formations",
+    "storage_bucket": "lazou-formations.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:850251025594:android:e1a78b9c24e8eedcdd0683",
+        "android_client_info": {
+          "package_name": "com.example.lazou_formations"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "850251025594-enuvaq2ttniem0960osj6mtd7vgp5s4a.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.example.lazou_formations",
+            "certificate_hash": "17cb5ed066e8ac741ca78aef8f29752e5fe3babb"
+          }
+        },
+        {
+          "client_id": "850251025594-vadsrs7hpce7htrrrjpmefmpfstbvtqm.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAa_sfwzgCFBcaFEi5RL4ycspyO7cy06i4"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "850251025594-vadsrs7hpce7htrrrjpmefmpfstbvtqm.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
