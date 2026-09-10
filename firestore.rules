@@ -17,6 +17,14 @@ service cloud.firestore {
       allow read: if connecte() && (request.auth.uid == uid || admin() || caissier() || formateur());
       allow create: if connecte() && request.auth.uid == uid && request.resource.data.role == 'etudiant';
       allow update: if admin();
+      // Le formateur peut corriger le matricule et le module en cours,
+      // uniquement pour les étudiants de ses propres groupes, et
+      // uniquement ces deux champs — jamais le rôle, l'argent ou
+      // l'affectation de groupe. Sans cette règle, "Ma classe" échoue
+      // silencieusement pour tout compte formateur (bug réel trouvé).
+      allow update: if formateur()
+        && formateurDuGroupe(resource.data.get('groupeId', ''))
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['matricule', 'moduleActuel']);
       allow update: if connecte() && request.auth.uid == uid
         && request.resource.data.role == resource.data.role
         && request.resource.data.get('montantDu', 0) == resource.data.get('montantDu', 0)

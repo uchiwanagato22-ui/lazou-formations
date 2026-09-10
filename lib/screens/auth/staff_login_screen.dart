@@ -3,10 +3,6 @@ import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import '../../services/auth_service.dart';
 import '../../theme/app_theme.dart';
-import '../../models/user_role.dart';
-import '../admin/admin_dashboard_screen.dart';
-import '../caissier/caissier_dashboard_screen.dart';
-import '../formateur/formateur_dashboard_screen.dart';
 
 /// Espace staff, séparé de l'espace étudiant. 4 cases de saisie, tremblement
 /// si le code est faux, envoi automatique dès le 4e chiffre — même
@@ -58,39 +54,18 @@ class _StaffLoginScreenState extends State<StaffLoginScreen>
     setState(() => _erreur = null);
     final auth = context.read<AuthService>();
     final erreur = await auth.connexionParCodeStaff(code);
-    if (erreur != null && mounted) {
+    if (!mounted) return;
+    if (erreur != null) {
       setState(() => _erreur = erreur);
       _shakeController.forward(from: 0);
       for (final c in _controllers) {
         c.clear();
       }
       _focusNodes[0].requestFocus();
-    }
-    if (erreur == null && mounted) {
-      final role = auth.role;
-      final Widget destination;
-      switch (role) {
-        case UserRole.admin:
-          destination = const AdminDashboardScreen();
-          break;
-        case UserRole.formateur:
-          destination = const FormateurDashboardScreen();
-          break;
-        case UserRole.caissier:
-          destination = const CaissierDashboardScreen();
-          break;
-        case UserRole.etudiant:
-        case null:
-          setState(() => _erreur = 'Compte staff sans rôle valide.');
-          return;
-      }
-
-      // Le login staff peut être ouvert depuis plusieurs endroits. On vide
-      // la pile pour qu'un simple "Retour" ne ramène pas au formulaire.
-      Navigator.of(context).pushAndRemoveUntil(
-        MaterialPageRoute(builder: (_) => destination),
-        (_) => false,
-      );
+    } else {
+      // Même correction que login_screen.dart : referme cet écran poussé
+      // par-dessus pour révéler le dashboard staff en dessous.
+      Navigator.of(context).popUntil((route) => route.isFirst);
     }
   }
 

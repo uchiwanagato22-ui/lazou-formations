@@ -322,17 +322,25 @@ class FirestoreService {
   /// devoir recharger toute la feuille de présence du groupe — c'est le
   /// vrai geste quotidien de Lazou : l'étudiant dit son numéro, le
   /// formateur tape, coche présent/absent, au suivant.
-  Future<void> pointerPresenceUnique(FormationGroup groupe, DateTime date, String uid, String statut) {
+  Future<void> pointerPresenceUnique(FormationGroup groupe, DateTime date, String uid, String statut) async {
     final id = _attendanceId(groupe.id, date);
-    return _db.collection('presences').doc(id).set({
+    final ref = _db.collection('presences').doc(id);
+
+    // IMPORTANT : ne pas faire set({etudiants: {uid: statut}}, merge: true).
+    // Cela remplaçait toute la map `etudiants` et pouvait effacer les
+    // présences déjà pointées des autres étudiants de la même séance.
+    // FieldPath met à jour uniquement la clé de cet étudiant.
+    await ref.set({
       'groupeId': groupe.id,
       'groupeNom': groupe.nom,
       'formationId': groupe.formationId,
       'formationTitre': groupe.formationTitre,
       'date': Timestamp.fromDate(DateTime(date.year, date.month, date.day)),
-      'etudiants': {uid: statut},
       'misAJourLe': FieldValue.serverTimestamp(),
     }, SetOptions(merge: true));
+    await ref.update({
+      FieldPath(['etudiants', uid]): statut,
+    });
   }
 
 
@@ -434,6 +442,30 @@ class FirestoreService {
 
   Future<void> definirMontantDu(String uid, double montant) {
     return _db.collection('users').doc(uid).update({'montantDu': montant});
+  }
+
+  /// La mensualité (ex: 8000 MRU/mois pour Bureautique) — c'est le vrai
+  /// modèle Lazou pour la plupart des formations : payer chaque mois,
+  /// pas un total unique à solder une fois pour toutes.
+  Future<void> definirMensualite(String uid, double montant) {
+    return _db.collection('users').doc(uid).update({'mensualite': montant});
+  }
+
+  /// Le module en cours (ex: "Excel", "Word") — chaque étudiant avance à
+  /// son rythme dans un même groupe, ce n'est pas un état de classe unique.
+  Future<void> definirModuleActuel(String uid, String module) {
+    return _db.collection('users').doc(uid).update({'moduleActuel': module});
+  }
+
+  /// Est-ce que ce mois précis est payé pour cet étudiant ? (au moins un
+  /// paiement enregistré avec ce tag mois).
+  Stream<bool> watchMoisPaye(String uid, String mois) {
+    return _db
+        .collection('paiements')
+        .where('etudiantUid', isEqualTo: uid)
+        .where('mois', isEqualTo: mois)
+        .snapshots()
+        .map((snap) => snap.docs.isNotEmpty);
   }
 
   /// Le matricule Lazou (celui déjà utilisé sur papier, ex: "33841") — pas

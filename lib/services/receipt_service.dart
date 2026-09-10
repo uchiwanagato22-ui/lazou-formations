@@ -27,6 +27,7 @@ class ReceiptService {
             if (matriculeEtudiant != null && matriculeEtudiant.isNotEmpty) _ligne('Matricule', matriculeEtudiant),
             _ligne('Formation', paiement.formationTitre),
             _ligne('Date', paiement.date != null ? _formaterDate(paiement.date!) : '—'),
+            if (paiement.moisLabel.isNotEmpty) _ligne('Mois concerné', paiement.moisLabel),
             _ligne('Méthode', paiement.methode.label),
             if (paiement.note != null && paiement.note!.isNotEmpty) _ligne('Note', paiement.note!),
             pw.SizedBox(height: 12),

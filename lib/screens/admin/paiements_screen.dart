@@ -7,18 +7,31 @@ import '../../services/firestore_service.dart';
 import '../../services/receipt_service.dart';
 import '../../theme/app_theme.dart';
 import '../../widgets/empty_state.dart';
+import '../../widgets/premium_ui.dart';
+import '../../widgets/animations.dart';
 
 /// Écran commun admin/caissier — c'est le rôle qui décide de ce qui est
 /// accessible autour (voir CaissierDashboardScreen), pas cet écran lui-même.
 class PaiementsScreen extends StatelessWidget {
-  const PaiementsScreen({super.key});
+  final bool showLogout;
+  const PaiementsScreen({super.key, this.showLogout = false});
 
   @override
   Widget build(BuildContext context) {
     final firestore = context.read<FirestoreService>();
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Paiements')),
+      appBar: AppBar(
+        title: Text(showLogout ? 'Caisse • Paiements' : 'Paiements'),
+        actions: [
+          if (showLogout)
+            IconButton(
+              tooltip: 'Déconnexion',
+              icon: const Icon(Icons.logout_rounded),
+              onPressed: () => context.read<AuthService>().deconnexion(),
+            ),
+        ],
+      ),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: () => PaiementsScreen.ouvrirFormulaire(context, firestore),
         icon: const Icon(Icons.add),
@@ -30,26 +43,35 @@ class PaiementsScreen extends StatelessWidget {
             stream: firestore.watchTotalEncaisse(),
             builder: (context, snapshot) => Padding(
               padding: const EdgeInsets.all(16),
-              child: Card(
-                color: LazouColors.primary,
-                child: Padding(
-                  padding: const EdgeInsets.all(18),
-                  child: Row(
-                    children: [
-                      const Icon(Icons.payments, color: Colors.white, size: 28),
-                      const SizedBox(width: 14),
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            '${(snapshot.data ?? 0).toStringAsFixed(0)} MRU',
-                            style: const TextStyle(color: Colors.white, fontSize: 22, fontWeight: FontWeight.w900),
-                          ),
-                          const Text('Total encaissé', style: TextStyle(color: Colors.white70, fontSize: 12)),
-                        ],
-                      ),
-                    ],
+              child: Container(
+                padding: const EdgeInsets.all(18),
+                decoration: BoxDecoration(
+                  gradient: const LinearGradient(
+                    colors: [LazouColors.primary, Color(0xFF1765A5)],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
                   ),
+                  borderRadius: BorderRadius.circular(20),
+                  boxShadow: [BoxShadow(color: LazouColors.primary.withValues(alpha: .16), blurRadius: 20, offset: const Offset(0, 8))],
+                ),
+                child: Row(
+                  children: [
+                    Container(
+                      width: 48, height: 48,
+                      decoration: BoxDecoration(color: Colors.white.withValues(alpha: .13), borderRadius: BorderRadius.circular(15)),
+                      child: const Icon(Icons.payments_rounded, color: Colors.white, size: 25),
+                    ),
+                    const SizedBox(width: 14),
+                    Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                      const Text('Total encaissé', style: TextStyle(color: Colors.white70, fontSize: 12)),
+                      const SizedBox(height: 2),
+                      Text(
+                        snapshot.hasError ? '—' : '${(snapshot.data ?? 0).toStringAsFixed(0)} MRU',
+                        style: const TextStyle(color: Colors.white, fontSize: 23, fontWeight: FontWeight.w900),
+                      ),
+                    ])),
+                    const Icon(Icons.trending_up_rounded, color: Colors.white70),
+                  ],
                 ),
               ),
             ),
@@ -61,6 +83,13 @@ class PaiementsScreen extends StatelessWidget {
                 if (snapshot.connectionState == ConnectionState.waiting) {
                   return const Center(child: CircularProgressIndicator());
                 }
+                if (snapshot.hasError) {
+                  return const PremiumEmptyState(
+                    icon: Icons.cloud_off_outlined,
+                    title: 'Paiements indisponibles',
+                    message: 'Impossible de charger les encaissements. Vérifie la connexion et les droits Firestore.',
+                  );
+                }
                 final paiements = snapshot.data ?? [];
                 if (paiements.isEmpty) {
                   return const EmptyState(icon: Icons.payments_outlined, message: 'Aucun paiement enregistré pour l\'instant.');
@@ -71,14 +100,20 @@ class PaiementsScreen extends StatelessWidget {
                   separatorBuilder: (_, __) => const SizedBox(height: 8),
                   itemBuilder: (context, i) {
                     final p = paiements[i];
-                    return Card(
+                    return Container(
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(17),
+                        border: Border.all(color: const Color(0xFFE9EDF2)),
+                        boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: .03), blurRadius: 14, offset: const Offset(0, 5))],
+                      ),
                       child: ListTile(
                         leading: CircleAvatar(
                           backgroundColor: LazouColors.success.withValues(alpha: .12),
                           child: const Icon(Icons.check, color: LazouColors.success),
                         ),
                         title: Text(p.etudiantNom, style: const TextStyle(fontWeight: FontWeight.w700)),
-                        subtitle: Text('${p.formationTitre} • ${p.methode.label}${p.note != null && p.note!.isNotEmpty ? ' • ${p.note}' : ''}'),
+                        subtitle: Text('${p.formationTitre} • ${p.methode.label}${p.moisLabel.isNotEmpty ? ' • ${p.moisLabel}' : ''}${p.note != null && p.note!.isNotEmpty ? ' • ${p.note}' : ''}'),
                         trailing: Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
@@ -129,12 +164,17 @@ class _FormulairePaiementState extends State<_FormulairePaiement> {
   final _noteCtrl = TextEditingController();
   StudentProfile? _etudiant;
   MethodePaiement _methode = MethodePaiement.especes;
+  late String _mois;
   bool _envoi = false;
 
   @override
   void initState() {
     super.initState();
     _etudiant = widget.etudiantPreselectionne;
+    _mois = cleMois(DateTime.now());
+    if (_etudiant != null && _etudiant!.mensualite > 0) {
+      _montantCtrl.text = _etudiant!.mensualite.toStringAsFixed(0);
+    }
   }
 
   @override
@@ -166,7 +206,12 @@ class _FormulairePaiementState extends State<_FormulairePaiement> {
                       items: etudiants
                           .map((e) => DropdownMenuItem(value: e, child: Text(e.nomComplet, overflow: TextOverflow.ellipsis)))
                           .toList(),
-                      onChanged: (v) => setState(() => _etudiant = v),
+                      onChanged: (v) => setState(() {
+                        _etudiant = v;
+                        if (v != null && v.mensualite > 0 && _montantCtrl.text.isEmpty) {
+                          _montantCtrl.text = v.mensualite.toStringAsFixed(0);
+                        }
+                      }),
                       validator: (v) => v == null ? 'Choisis un étudiant' : null,
                     );
                   },
@@ -179,6 +224,22 @@ class _FormulairePaiementState extends State<_FormulairePaiement> {
                 decoration: const InputDecoration(labelText: 'Montant (MRU)'),
                 keyboardType: TextInputType.number,
                 validator: (v) => (double.tryParse(v ?? '') == null) ? 'Montant invalide' : null,
+              ),
+              const SizedBox(height: 12),
+              const Text('Mois concerné', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 12.5, color: LazouColors.textSecondary)),
+              const SizedBox(height: 6),
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: _optionsMois().map((entry) {
+                  final cle = entry.$1;
+                  final label = entry.$2;
+                  return ChoiceChip(
+                    label: Text(label),
+                    selected: _mois == cle,
+                    onSelected: (_) => setState(() => _mois = cle),
+                  );
+                }).toList(),
               ),
               const SizedBox(height: 12),
               Wrap(
@@ -197,17 +258,28 @@ class _FormulairePaiementState extends State<_FormulairePaiement> {
                 decoration: const InputDecoration(labelText: 'Note (optionnel)'),
               ),
               const SizedBox(height: 20),
-              ElevatedButton(
-                onPressed: _envoi ? null : _soumettre,
-                child: _envoi
-                    ? const SizedBox(height: 18, width: 18, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
-                    : const Text('Enregistrer'),
+              PressFeedback(
+                child: ElevatedButton(
+                  onPressed: _envoi ? null : _soumettre,
+                  child: _envoi
+                      ? const SizedBox(height: 18, width: 18, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                      : const Text('Enregistrer'),
+                ),
               ),
             ],
           ),
         ),
       ),
     );
+  }
+
+  List<(String, String)> _optionsMois() {
+    final maintenant = DateTime.now();
+    return List.generate(4, (i) {
+      final d = DateTime(maintenant.year, maintenant.month - 1 + i, 1);
+      const noms = ['', 'Jan', 'Fév', 'Mar', 'Avr', 'Mai', 'Jun', 'Jul', 'Aoû', 'Sep', 'Oct', 'Nov', 'Déc'];
+      return (cleMois(d), '${noms[d.month]} ${d.year}');
+    });
   }
 
   Future<void> _soumettre() async {
@@ -221,6 +293,7 @@ class _FormulairePaiementState extends State<_FormulairePaiement> {
       formationTitre: _etudiant!.formationTitre ?? 'Non affectée',
       montant: double.parse(_montantCtrl.text),
       methode: _methode,
+      mois: _mois,
       note: _noteCtrl.text.trim().isEmpty ? null : _noteCtrl.text.trim(),
       enregistreParNom: auth.user?.email ?? 'Staff',
     ));

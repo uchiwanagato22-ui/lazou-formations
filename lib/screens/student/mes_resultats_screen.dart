@@ -7,6 +7,7 @@ import '../../services/auth_service.dart';
 import '../../services/firestore_service.dart';
 import '../../theme/app_theme.dart';
 import '../../widgets/empty_state.dart';
+import '../../widgets/premium_ui.dart';
 
 class MesResultatsScreen extends StatelessWidget {
   const MesResultatsScreen({super.key});
@@ -25,7 +26,8 @@ class MesResultatsScreen extends StatelessWidget {
       body: StreamBuilder<DocumentSnapshot<Map<String, dynamic>>>(
         stream: firestore.watchEtudiant(uid),
         builder: (context, profilSnap) {
-          if (!profilSnap.hasData) return const Center(child: CircularProgressIndicator());
+          if (profilSnap.hasError) return const PremiumEmptyState(icon: Icons.cloud_off_outlined, title: 'Résultats indisponibles', message: 'Impossible de charger ton profil. Réessaie dans un instant.');
+          if (profilSnap.connectionState == ConnectionState.waiting) return const Center(child: CircularProgressIndicator());
           final student = StudentProfile.fromDoc(profilSnap.data!);
 
           if (student.groupeId == null || student.groupeId!.isEmpty) {
@@ -47,8 +49,9 @@ class MesResultatsScreen extends StatelessWidget {
               if (snapshot.connectionState == ConnectionState.waiting) {
                 return const Center(child: CircularProgressIndicator());
               }
+              if (snapshot.hasError) return const PremiumEmptyState(icon: Icons.assignment_outlined, title: 'Résultats indisponibles', message: 'Les évaluations n’ont pas pu être chargées.');
               if (evaluations.isEmpty) {
-                return const Center(child: Text('Aucune évaluation notée pour l\'instant.'));
+                return const PremiumEmptyState(icon: Icons.assignment_outlined, title: 'Aucune évaluation', message: 'Aucune évaluation notée n’est encore disponible.');
               }
 
               final mesNotes = evaluations.where((e) => e.noteDe(uid) != null).toList();

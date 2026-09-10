@@ -93,6 +93,37 @@ class _LigneEtudiant extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final firestore = context.read<FirestoreService>();
+
+    // Mensualité définie -> la vraie question de Lazou : "ce mois est-il
+    // payé ?", pas un solde théorique global.
+    if (etudiant.mensualite > 0) {
+      final moisCourant = cleMois(DateTime.now());
+      return StreamBuilder<bool>(
+        stream: firestore.watchMoisPaye(etudiant.uid, moisCourant),
+        builder: (context, snap) {
+          final paye = snap.data ?? false;
+          return Card(
+            child: ListTile(
+              leading: Icon(
+                paye ? Icons.check_circle_outline : Icons.error_outline,
+                color: paye ? LazouColors.success : LazouColors.error,
+              ),
+              title: Text(
+                etudiant.matricule.isNotEmpty ? '#${etudiant.matricule} — ${etudiant.nomComplet}' : etudiant.nomComplet,
+                style: const TextStyle(fontWeight: FontWeight.w700),
+              ),
+              subtitle: Text('Mensualité : ${etudiant.mensualite.toStringAsFixed(0)} MRU/mois'),
+              trailing: paye
+                  ? const Text('Mois payé', style: TextStyle(color: LazouColors.success, fontWeight: FontWeight.w700))
+                  : const Text('Mois dû', style: TextStyle(color: LazouColors.error, fontWeight: FontWeight.w700)),
+            ),
+          );
+        },
+      );
+    }
+
+    // Repli : logique historique par montant total (formations à tarif
+    // unique plutôt que mensuel).
     return StreamBuilder<List<Paiement>>(
       stream: firestore.watchPaiementsEtudiant(etudiant.uid),
       builder: (context, snap) {

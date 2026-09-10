@@ -132,7 +132,28 @@ class _MaClasseScreenState extends State<MaClasseScreen> {
                                     e.nomComplet.isEmpty ? 'Étudiant sans nom' : e.nomComplet,
                                     style: const TextStyle(fontWeight: FontWeight.w700),
                                   ),
-                                  subtitle: e.telephone.isNotEmpty ? Text(e.telephone) : null,
+                                  subtitle: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      if (e.telephone.isNotEmpty) Text(e.telephone),
+                                      GestureDetector(
+                                        onTap: () => _dialogueModule(context, service, e),
+                                        child: Container(
+                                          margin: const EdgeInsets.only(top: 4),
+                                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                                          decoration: BoxDecoration(
+                                            color: LazouColors.secondary.withValues(alpha: .15),
+                                            borderRadius: BorderRadius.circular(6),
+                                          ),
+                                          child: Text(
+                                            e.moduleActuel.isNotEmpty ? '📘 ${e.moduleActuel}' : 'Module : à définir',
+                                            style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 11.5, color: LazouColors.secondary),
+                                          ),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
                                   trailing: SizedBox(
                                     width: 100,
                                     child: TextField(
@@ -172,5 +193,54 @@ class _MaClasseScreenState extends State<MaClasseScreen> {
     } finally {
       if (mounted) setState(() => _enregistrement = false);
     }
+  }
+
+  /// Chaque étudiant avance à son rythme dans le même groupe — ce dialogue
+  /// permet de le pointer module par module, pas juste "dans le groupe X".
+  void _dialogueModule(BuildContext context, FirestoreService service, StudentProfile etudiant) {
+    final ctrl = TextEditingController(text: etudiant.moduleActuel);
+    const suggestions = ['Dactylographie', 'Word', 'Excel', 'PowerPoint', 'Access'];
+
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text('Module — ${etudiant.nomComplet}'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: suggestions
+                  .map((s) => ActionChip(
+                        label: Text(s),
+                        onPressed: () {
+                          service.definirModuleActuel(etudiant.uid, s);
+                          Navigator.of(ctx).pop();
+                        },
+                      ))
+                  .toList(),
+            ),
+            const SizedBox(height: 14),
+            TextField(
+              controller: ctrl,
+              decoration: const InputDecoration(labelText: 'Ou autre module'),
+              autofocus: true,
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.of(ctx).pop(), child: const Text('Annuler')),
+          ElevatedButton(
+            onPressed: () {
+              service.definirModuleActuel(etudiant.uid, ctrl.text.trim());
+              Navigator.of(ctx).pop();
+            },
+            child: const Text('Enregistrer'),
+          ),
+        ],
+      ),
+    );
   }
 }

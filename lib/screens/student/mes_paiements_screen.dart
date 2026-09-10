@@ -7,6 +7,7 @@ import '../../services/auth_service.dart';
 import '../../services/firestore_service.dart';
 import '../../services/receipt_service.dart';
 import '../../theme/app_theme.dart';
+import '../../widgets/premium_ui.dart';
 
 /// Lecture seule côté étudiant — seul le staff (admin/caissier) peut
 /// enregistrer un paiement, depuis PaiementsScreen.
@@ -27,30 +28,14 @@ class MesPaiementsScreen extends StatelessWidget {
       body: StreamBuilder<DocumentSnapshot<Map<String, dynamic>>>(
         stream: firestore.watchEtudiant(uid),
         builder: (context, profilSnap) {
-          if (profilSnap.hasError) {
-            return const Center(child: Padding(
-              padding: EdgeInsets.all(28),
-              child: Text('Impossible de charger ton profil. Vérifie ta connexion puis réessaie.', textAlign: TextAlign.center),
-            ));
-          }
+          if (profilSnap.hasError) return PremiumEmptyState(icon: Icons.cloud_off_outlined, title: 'Paiements indisponibles', message: 'Impossible de charger ton profil financier. Réessaie dans un instant.');
           if (!profilSnap.hasData) return const Center(child: CircularProgressIndicator());
-          if (!profilSnap.data!.exists) {
-            return const Center(child: Padding(
-              padding: EdgeInsets.all(28),
-              child: Text('Profil étudiant introuvable. Contacte l\'administration.', textAlign: TextAlign.center),
-            ));
-          }
           final student = StudentProfile.fromDoc(profilSnap.data!);
 
           return StreamBuilder<List<Paiement>>(
             stream: firestore.watchPaiementsEtudiant(uid),
             builder: (context, snapshot) {
-              if (snapshot.hasError) {
-                return Center(child: Padding(
-                  padding: const EdgeInsets.all(28),
-                  child: Text('Impossible de charger les paiements. Vérifie ta connexion ou les règles d\'accès.', textAlign: TextAlign.center),
-                ));
-              }
+              if (snapshot.hasError) return PremiumEmptyState(icon: Icons.receipt_long_outlined, title: 'Historique indisponible', message: 'Les paiements existent peut-être, mais leur chargement a rencontré une erreur.');
               final paiements = snapshot.data ?? [];
               final paye = paiements.fold<double>(0, (t, p) => t + p.montant);
               final reste = (student.montantDu - paye).clamp(0, double.infinity);
@@ -69,13 +54,16 @@ class MesPaiementsScreen extends StatelessWidget {
                           Text(student.formationTitre ?? 'Non affectée',
                               style: const TextStyle(color: Colors.white, fontSize: 17, fontWeight: FontWeight.w800)),
                           const SizedBox(height: 16),
-                          Row(
-                            children: [
-                              _Stat(label: 'Dû', valeur: student.montantDu),
-                              _Stat(label: 'Payé', valeur: paye),
-                              _Stat(label: 'Reste', valeur: reste.toDouble(), accent: true),
-                            ],
-                          ),
+                          if (student.mensualite > 0)
+                            _StatutMoisCourant(uid: uid, mensualite: student.mensualite, firestore: firestore)
+                          else
+                            Row(
+                              children: [
+                                _Stat(label: 'Dû', valeur: student.montantDu),
+                                _Stat(label: 'Payé', valeur: paye),
+                                _Stat(label: 'Reste', valeur: reste.toDouble(), accent: true),
+                              ],
+                            ),
                         ],
                       ),
                     ),
@@ -94,7 +82,7 @@ class MesPaiementsScreen extends StatelessWidget {
                           child: ListTile(
                             leading: const Icon(Icons.check_circle_outline, color: LazouColors.success),
                             title: Text('${p.montant.toStringAsFixed(0)} MRU', style: const TextStyle(fontWeight: FontWeight.w700)),
-                            subtitle: Text(p.methode.label),
+                            subtitle: Text('${p.methode.label}${p.moisLabel.isNotEmpty ? ' • ${p.moisLabel}' : ''}'),
                             trailing: Row(
                               mainAxisSize: MainAxisSize.min,
                               children: [
@@ -115,6 +103,42 @@ class MesPaiementsScreen extends StatelessWidget {
           );
         },
       ),
+    );
+  }
+}
+
+class _StatutMoisCourant extends StatelessWidget {
+  final String uid;
+  final double mensualite;
+  final FirestoreService firestore;
+  const _StatutMoisCourant({required this.uid, required this.mensualite, required this.firestore});
+
+  @override
+  Widget build(BuildContext context) {
+    final moisCle = cleMois(DateTime.now());
+    return StreamBuilder<bool>(
+      stream: firestore.watchMoisPaye(uid, moisCle),
+      builder: (context, snap) {
+        final paye = snap.data ?? false;
+        return Row(
+          children: [
+            Icon(paye ? Icons.check_circle : Icons.error_outline, color: paye ? Colors.greenAccent : LazouColors.secondary, size: 22),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    paye ? 'Ce mois est payé' : 'Ce mois n\'est pas encore payé',
+                    style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w800, fontSize: 14.5),
+                  ),
+                  Text('Mensualité : ${mensualite.toStringAsFixed(0)} MRU', style: const TextStyle(color: Colors.white70, fontSize: 12)),
+                ],
+              ),
+            ),
+          ],
+        );
+      },
     );
   }
 }

@@ -35,6 +35,37 @@ class _TapScaleState extends State<TapScale> {
   }
 }
 
+/// Comme TapScale, mais pour enrober un VRAI bouton Material (ElevatedButton,
+/// FilledButton...) sans risquer de double-déclenchement : utilise Listener
+/// (qui ne participe jamais à l'arène de gestes) plutôt que GestureDetector,
+/// donc le onPressed du bouton en dessous reste le seul à se déclencher.
+class PressFeedback extends StatefulWidget {
+  final Widget child;
+  const PressFeedback({super.key, required this.child});
+
+  @override
+  State<PressFeedback> createState() => _PressFeedbackState();
+}
+
+class _PressFeedbackState extends State<PressFeedback> {
+  double _scale = 1;
+
+  @override
+  Widget build(BuildContext context) {
+    return Listener(
+      onPointerDown: (_) => setState(() => _scale = 0.97),
+      onPointerUp: (_) => setState(() => _scale = 1),
+      onPointerCancel: (_) => setState(() => _scale = 1),
+      child: AnimatedScale(
+        scale: _scale,
+        duration: const Duration(milliseconds: 100),
+        curve: Curves.easeOut,
+        child: widget.child,
+      ),
+    );
+  }
+}
+
 /// Fait apparaître un élément de liste en fondu + léger glissement vers le
 /// haut, décalé selon son index — donne un effet "cascade" à l'ouverture
 /// d'un écran plutôt qu'un affichage brut de tous les éléments d'un coup.

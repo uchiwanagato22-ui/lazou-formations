@@ -3,8 +3,8 @@ import 'package:provider/provider.dart';
 import '../../services/auth_service.dart';
 import '../../services/firestore_service.dart';
 import '../../theme/app_theme.dart';
-import '../auth/login_screen.dart';
 import '../../widgets/animations.dart';
+import '../../widgets/premium_ui.dart';
 import 'admin_formations_screen.dart';
 import 'admin_inscriptions_screen.dart';
 import 'admin_formateurs_screen.dart';
@@ -22,6 +22,7 @@ import '../formateur/evaluations_screen.dart';
 import '../formateur/cours_screen.dart';
 import '../formateur/ma_classe_screen.dart';
 import '../formateur/pointage_matricule_screen.dart';
+import '../formateur/historique_presence_screen.dart';
 import '../formateur/suivi_paiements_screen.dart';
 
 class AdminDashboardScreen extends StatelessWidget {
@@ -45,7 +46,7 @@ class AdminDashboardScreen extends StatelessWidget {
               IconButton(
                 tooltip: 'Déconnexion',
                 icon: const Icon(Icons.logout),
-                onPressed: () async { await auth.deconnexion(); if (!context.mounted) return; Navigator.of(context).pushAndRemoveUntil(MaterialPageRoute(builder: (_) => const LoginScreen()), (_) => false); },
+                onPressed: () => auth.deconnexion(),
               ),
             ],
             flexibleSpace: FlexibleSpaceBar(
@@ -120,6 +121,7 @@ class AdminDashboardScreen extends StatelessWidget {
                     _Tuile(Icons.groups_outlined, 'Classes & matricules', () => const MaClasseScreen()),
                     _Tuile(Icons.fact_check_outlined, 'Présences', () => const AttendanceScreen()),
                     _Tuile(Icons.badge, 'Pointage rapide', () => const PointageMatriculeScreen()),
+                    _Tuile(Icons.history_edu_outlined, 'Historique présences', () => const HistoriquePresenceScreen()),
                     _Tuile(Icons.assignment_outlined, 'Évaluations & notes', () => const EvaluationsScreen()),
                     _Tuile(Icons.folder_open_outlined, 'Cours & supports', () => const CoursScreen()),
                   ],
@@ -346,27 +348,12 @@ class _Tuile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return TapScale(
-      onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => builder())),
-      child: Container(
-        padding: const EdgeInsets.all(14),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: const Color(0xFFEEF0F3)),
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Container(
-              padding: const EdgeInsets.all(8),
-              decoration: BoxDecoration(color: LazouColors.primary.withValues(alpha: .08), borderRadius: BorderRadius.circular(10)),
-              child: Icon(icon, color: LazouColors.primary, size: 19),
-            ),
-            const Spacer(),
-            Text(label, style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 12.5), maxLines: 2, overflow: TextOverflow.ellipsis),
-          ],
-        ),
+    return PremiumActionTile(
+      icon: icon,
+      title: label,
+      subtitle: 'Accéder à cet espace',
+      onTap: () => Navigator.of(context).push(
+        MaterialPageRoute(builder: (_) => builder()),
       ),
     );
   }

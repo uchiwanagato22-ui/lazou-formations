@@ -6,6 +6,7 @@ import '../../services/auth_service.dart';
 import '../../services/firestore_service.dart';
 import '../../theme/app_theme.dart';
 import '../../widgets/empty_state.dart';
+import '../../widgets/premium_ui.dart';
 
 class MesPresencesScreen extends StatelessWidget {
   const MesPresencesScreen({super.key});
@@ -24,7 +25,8 @@ class MesPresencesScreen extends StatelessWidget {
       body: StreamBuilder<DocumentSnapshot<Map<String, dynamic>>>(
         stream: firestore.watchEtudiant(uid),
         builder: (context, profilSnap) {
-          if (!profilSnap.hasData) return const Center(child: CircularProgressIndicator());
+          if (profilSnap.hasError) return const PremiumEmptyState(icon: Icons.cloud_off_outlined, title: 'Présences indisponibles', message: 'Impossible de charger ton profil. Réessaie dans un instant.');
+          if (profilSnap.connectionState == ConnectionState.waiting) return const Center(child: CircularProgressIndicator());
           final student = StudentProfile.fromDoc(profilSnap.data!);
 
           if (student.groupeId == null || student.groupeId!.isEmpty) {
@@ -38,8 +40,9 @@ class MesPresencesScreen extends StatelessWidget {
               if (snapshot.connectionState == ConnectionState.waiting) {
                 return const Center(child: CircularProgressIndicator());
               }
+              if (snapshot.hasError) return const PremiumEmptyState(icon: Icons.fact_check_outlined, title: 'Présences indisponibles', message: 'L’historique n’a pas pu être chargé.');
               if (presences.isEmpty) {
-                return const Center(child: Text('Aucune présence enregistrée pour l\'instant.'));
+                return const PremiumEmptyState(icon: Icons.fact_check_outlined, title: 'Aucune présence', message: 'Aucune séance n’est encore enregistrée pour ton groupe.');
               }
               final presents = presences.where((p) => p.statut == 'present').length;
               final taux = presents / presences.length * 100;

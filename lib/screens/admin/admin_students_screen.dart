@@ -420,6 +420,33 @@ void _dialogueMatricule(BuildContext context, FirestoreService firestore, Studen
   );
 }
 
+void _dialogueMensualite(BuildContext context, FirestoreService firestore, StudentProfile student) {
+  final ctrl = TextEditingController(text: student.mensualite > 0 ? student.mensualite.toStringAsFixed(0) : '');
+  showDialog(
+    context: context,
+    builder: (ctx) => AlertDialog(
+      title: const Text('Mensualité'),
+      content: TextField(
+        controller: ctrl,
+        keyboardType: TextInputType.number,
+        decoration: const InputDecoration(labelText: 'Montant par mois (MRU)', hintText: 'ex: 8000'),
+        autofocus: true,
+      ),
+      actions: [
+        TextButton(onPressed: () => Navigator.of(ctx).pop(), child: const Text('Annuler')),
+        ElevatedButton(
+          onPressed: () {
+            final montant = double.tryParse(ctrl.text);
+            if (montant != null) firestore.definirMensualite(student.uid, montant);
+            Navigator.of(ctx).pop();
+          },
+          child: const Text('Enregistrer'),
+        ),
+      ],
+    ),
+  );
+}
+
 void _dialogueMontantDu(BuildContext context, FirestoreService firestore, StudentProfile student) {
   final ctrl = TextEditingController(text: student.montantDu > 0 ? student.montantDu.toStringAsFixed(0) : '');
   showDialog(
@@ -472,6 +499,20 @@ class _FinancesCard extends StatelessWidget {
               ),
             ]),
             const SizedBox(height: 8),
+            Row(
+              children: [
+                Expanded(child: _InfoRow('Mensualité', student.mensualite > 0 ? '${student.mensualite.toStringAsFixed(0)} MRU/mois' : 'Non définie')),
+                TextButton(
+                  onPressed: () => _dialogueMensualite(context, firestore, student),
+                  child: const Text('Modifier'),
+                ),
+              ],
+            ),
+            const Text(
+              'Si définie, "Suivi paiements" bascule sur le mode "mois payé / mois dû" au lieu du solde total.',
+              style: TextStyle(fontSize: 11, color: LazouColors.textSecondary),
+            ),
+            const Divider(height: 24),
             StreamBuilder<List<Paiement>>(
               stream: firestore.watchPaiementsEtudiant(student.uid),
               builder: (context, snapshot) {
@@ -497,7 +538,7 @@ class _FinancesCard extends StatelessWidget {
                       ...paiements.take(3).map((p) => Padding(
                             padding: const EdgeInsets.only(bottom: 6),
                             child: Text(
-                              '${p.montant.toStringAsFixed(0)} MRU • ${p.methode.label}',
+                              '${p.montant.toStringAsFixed(0)} MRU • ${p.methode.label}${p.moisLabel.isNotEmpty ? ' • ${p.moisLabel}' : ''}',
                               style: const TextStyle(fontSize: 12.5, color: LazouColors.textSecondary),
                             ),
                           )),

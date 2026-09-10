@@ -11,6 +11,8 @@ class StudentProfile {
   final String? groupeId;
   final String statut;
   final double montantDu;
+  final double mensualite;
+  final String moduleActuel;
   final DateTime? creeLe;
 
   const StudentProfile({
@@ -24,6 +26,8 @@ class StudentProfile {
     this.groupeId,
     this.statut = 'actif',
     this.montantDu = 0,
+    this.mensualite = 0,
+    this.moduleActuel = '',
     this.creeLe,
   });
 
@@ -41,6 +45,8 @@ class StudentProfile {
       groupeId: d['groupeId']?.toString(),
       statut: (d['statut'] ?? 'actif').toString(),
       montantDu: (d['montantDu'] as num?)?.toDouble() ?? 0,
+      mensualite: (d['mensualite'] as num?)?.toDouble() ?? 0,
+      moduleActuel: (d['moduleActuel'] ?? '').toString(),
       creeLe: ts is Timestamp ? ts.toDate() : null,
     );
   }

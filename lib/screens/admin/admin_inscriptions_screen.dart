@@ -5,6 +5,7 @@ import '../../models/group_model.dart';
 import '../../services/firestore_service.dart';
 import '../../theme/app_theme.dart';
 import '../../widgets/empty_state.dart';
+import '../../widgets/animations.dart';
 
 class AdminInscriptionsScreen extends StatelessWidget {
   const AdminInscriptionsScreen({super.key});
@@ -107,9 +108,11 @@ class AdminInscriptionsScreen extends StatelessWidget {
                               onPressed: () => _refuser(context, firestore, doc.id),
                               child: const Text('Refuser'),
                             ),
-                            ElevatedButton(
-                              onPressed: () => _valider(context, firestore, doc.id, data),
-                              child: const Text('Valider'),
+                            PressFeedback(
+                              child: ElevatedButton(
+                                onPressed: () => _valider(context, firestore, doc.id, data),
+                                child: const Text('Valider'),
+                              ),
                             ),
                           ],
                         ],
@@ -144,34 +147,34 @@ class AdminInscriptionsScreen extends StatelessWidget {
     final uid = (data['uid'] ?? '').toString();
     final formationId = (data['formationId'] ?? '').toString();
     final formationTitre = (data['formationTitre'] ?? '').toString();
+    final matriculeExistant = (data['matricule'] ?? '').toString();
 
     try {
       final groupes = await firestore.getGroupesOnce();
       final groupesCompatibles = groupes.where((g) => g.formationId == formationId).toList();
-      FormationGroup? groupe;
-      var continuer = true;
 
-      if (uid.isNotEmpty && groupesCompatibles.isNotEmpty) {
-        final choix = await _choisirGroupe(context, groupesCompatibles, formationTitre);
-        if (!context.mounted) return;
-        continuer = choix.$1;
-        groupe = choix.$2;
-      }
-      if (!continuer) return;
+      final resultat = await _finaliserInscription(
+        context: context,
+        formationTitre: formationTitre,
+        matriculeInitial: matriculeExistant,
+        groupesCompatibles: uid.isNotEmpty ? groupesCompatibles : const [],
+        demandeUnCompte: uid.isEmpty,
+      );
+      if (resultat == null) return; // annulé
 
       await firestore.validerInscription(
         inscriptionId: inscriptionId,
         uid: uid.isEmpty ? null : uid,
         formationId: formationId,
         formationTitre: formationTitre,
-        groupe: groupe,
-        matricule: (data['matricule'] as String?)?.trim(),
+        groupe: resultat.groupe,
+        matricule: resultat.matricule,
       );
 
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(
           content: Text(uid.isNotEmpty
-              ? (groupe == null ? 'Inscription validée et formation affectée.' : 'Inscription validée et étudiant affecté au groupe.')
+              ? 'Inscription validée — matricule #${resultat.matricule} affecté${resultat.groupe != null ? ' au groupe ${resultat.groupe!.nom}' : ''}.'
               : 'Inscription validée. L’étudiant devra créer son compte pour être affecté automatiquement.'),
         ));
       }
@@ -182,35 +185,102 @@ class AdminInscriptionsScreen extends StatelessWidget {
     }
   }
 
-  Future<(bool, FormationGroup?)> _choisirGroupe(
-    BuildContext context,
-    List<FormationGroup> groupes,
-    String formationTitre,
-  ) async {
-    final result = await showDialog<(bool, FormationGroup?)>(
+  /// Un vrai petit formulaire de finalisation, pas juste "OK" en un tap :
+  /// le matricule est obligatoire (c'est le numéro que Lazou utilise tous
+  /// les jours), et si des groupes compatibles existent, il faut en
+  /// choisir un explicitement — plus de case "valider sans groupe" trop
+  /// facile à cliquer par réflexe, qui laissait planning/paiements vides.
+  Future<_ResultatFinalisation?> _finaliserInscription({
+    required BuildContext context,
+    required String formationTitre,
+    required String matriculeInitial,
+    required List<FormationGroup> groupesCompatibles,
+    required bool demandeUnCompte,
+  }) {
+    final matriculeCtrl = TextEditingController(text: matriculeInitial);
+    FormationGroup? groupeChoisi = groupesCompatibles.isNotEmpty ? groupesCompatibles.first : null;
+    final formKey = GlobalKey<FormState>();
+
+    return showDialog<_ResultatFinalisation>(
       context: context,
-      builder: (ctx) => SimpleDialog(
-        title: Text('Groupe — $formationTitre'),
-        children: [
-          SimpleDialogOption(
-            onPressed: () => Navigator.pop(ctx, (true, null)),
-            child: const Padding(
-              padding: EdgeInsets.symmetric(vertical: 10),
-              child: Text('Valider sans affecter de groupe'),
+      barrierDismissible: false,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setState) => AlertDialog(
+          title: Text('Finaliser — $formationTitre'),
+          content: Form(
+            key: formKey,
+            child: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  if (demandeUnCompte)
+                    const Padding(
+                      padding: EdgeInsets.only(bottom: 12),
+                      child: Text(
+                        'Cette demande n\'a pas de compte lié — le matricule/groupe seront affectés automatiquement dès que l\'étudiant créera son compte.',
+                        style: TextStyle(color: LazouColors.textSecondary, fontSize: 12.5),
+                      ),
+                    ),
+                  TextFormField(
+                    controller: matriculeCtrl,
+                    enabled: !demandeUnCompte,
+                    decoration: const InputDecoration(labelText: 'Matricule Lazou'),
+                    keyboardType: TextInputType.number,
+                    validator: (v) => (!demandeUnCompte && (v == null || v.trim().isEmpty)) ? 'Le matricule est obligatoire' : null,
+                  ),
+                  const SizedBox(height: 14),
+                  if (groupesCompatibles.isEmpty)
+                    const Text(
+                      'Aucun groupe pour cette formation pour l\'instant — crée-en un depuis "Sessions & groupes" pour pouvoir affecter cet étudiant.',
+                      style: TextStyle(color: LazouColors.secondary, fontSize: 12.5),
+                    )
+                  else ...[
+                    const Text('Groupe', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 12.5)),
+                    const SizedBox(height: 6),
+                    DropdownButtonFormField<FormationGroup>(
+                      initialValue: groupeChoisi,
+                      isExpanded: true,
+                      items: groupesCompatibles
+                          .map((g) => DropdownMenuItem(
+                                value: g,
+                                child: Text(
+                                  '${g.nom} · ${g.jours.isEmpty ? 'Jours ?' : g.jours} · ${g.horaire.isEmpty ? 'Horaire ?' : g.horaire}',
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ))
+                          .toList(),
+                      onChanged: demandeUnCompte ? null : (g) => setState(() => groupeChoisi = g),
+                    ),
+                  ],
+                ],
+              ),
             ),
           ),
-          ...groupes.map((g) => SimpleDialogOption(
-                onPressed: () => Navigator.pop(ctx, (true, g)),
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 10),
-                  child: Text('${g.nom} · ${g.jours.isEmpty ? 'Jours non définis' : g.jours} · ${g.horaire.isEmpty ? 'Horaire non défini' : g.horaire}'),
-                ),
-              )),
-        ],
+          actions: [
+            TextButton(onPressed: () => Navigator.of(ctx).pop(), child: const Text('Annuler')),
+            ElevatedButton(
+              onPressed: () {
+                if (!demandeUnCompte && !formKey.currentState!.validate()) return;
+                Navigator.of(ctx).pop(_ResultatFinalisation(
+                  matricule: matriculeCtrl.text.trim(),
+                  groupe: groupeChoisi,
+                ));
+              },
+              child: const Text('Valider l\'inscription'),
+            ),
+          ],
+        ),
       ),
     );
-    return result ?? (false, null);
   }
+}
+
+/// Petit conteneur pour le résultat du dialogue de finalisation.
+class _ResultatFinalisation {
+  final String matricule;
+  final FormationGroup? groupe;
+  const _ResultatFinalisation({required this.matricule, required this.groupe});
 }
 
 class _StatutBadge extends StatelessWidget {

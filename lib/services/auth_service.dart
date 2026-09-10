@@ -18,11 +18,13 @@ class AuthService extends ChangeNotifier {
   User? _user;
   UserRole? _role;
   bool _loading = false;
+  bool _initializing = true;
 
   User? get user => _user;
   UserRole? get role => _role;
   bool get loading => _loading;
   bool get isConnecte => _user != null;
+  bool get initializing => _initializing;
 
   AuthService() {
     _auth.authStateChanges().listen(_onAuthChanged);
@@ -32,10 +34,11 @@ class AuthService extends ChangeNotifier {
     _user = user;
     if (user == null) {
       _role = null;
-      notifyListeners();
-      return;
+    } else {
+      await _chargerRole(user.uid);
     }
-    await _chargerRole(user.uid);
+    _initializing = false;
+    notifyListeners();
   }
 
   Future<void> _chargerRole(String uid) async {
@@ -55,13 +58,7 @@ class AuthService extends ChangeNotifier {
     _loading = true;
     notifyListeners();
     try {
-      final credentials = await _auth.signInWithEmailAndPassword(
-        email: email,
-        password: motDePasse,
-      );
-      // Charger le rôle avant de rendre la main à l'écran de connexion.
-      // Cela permet à l'interface de rediriger immédiatement vers le bon espace.
-      await _chargerRole(credentials.user!.uid);
+      await _auth.signInWithEmailAndPassword(email: email, password: motDePasse);
       return null; // succès
     } on FirebaseAuthException catch (e) {
       return _messageErreur(e.code);
@@ -127,7 +124,6 @@ class AuthService extends ChangeNotifier {
           'creeLe': FieldValue.serverTimestamp(),
         });
       }
-      await _chargerRole(result.user!.uid);
       return null;
     } on FirebaseAuthException catch (e) {
       return _messageErreur(e.code);
@@ -161,12 +157,7 @@ class AuthService extends ChangeNotifier {
         return 'Code incorrect.';
       }
       final data = jsonDecode(reponse.body) as Map<String, dynamic>;
-      final token = data['token'];
-      if (token is! String || token.isEmpty) {
-        return 'Réponse de connexion invalide.';
-      }
-      final credentials = await _auth.signInWithCustomToken(token);
-      await _chargerRole(credentials.user!.uid);
+      await _auth.signInWithCustomToken(data['token'] as String);
       return null;
     } catch (_) {
       return 'Connexion impossible. Vérifie ta connexion internet.';
@@ -177,8 +168,14 @@ class AuthService extends ChangeNotifier {
   }
 
   Future<void> deconnexion() async {
-    await GoogleSignIn().signOut();
-    await _auth.signOut();
+    try {
+      await GoogleSignIn().signOut();
+    } catch (_) {
+      // La session Firebase reste la source de vérité : même si Google
+      // échoue à se déconnecter, on doit pouvoir fermer la session locale.
+    } finally {
+      await _auth.signOut();
+    }
   }
 
   String _messageErreur(String code) {

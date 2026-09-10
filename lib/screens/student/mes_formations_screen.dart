@@ -40,9 +40,13 @@ class MesFormationsScreen extends StatelessWidget {
                       contentPadding: const EdgeInsets.all(16),
                       leading: const Icon(Icons.school, color: LazouColors.primary, size: 32),
                       title: Text(student.formationTitre ?? '', style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 16)),
-                      subtitle: const Padding(
-                        padding: EdgeInsets.only(top: 4),
-                        child: Text('Ta formation en cours'),
+                      subtitle: Padding(
+                        padding: const EdgeInsets.only(top: 4),
+                        child: Text(
+                          student.moduleActuel.isNotEmpty
+                              ? 'Module en cours : ${student.moduleActuel}'
+                              : 'Ta formation en cours',
+                        ),
                       ),
                       trailing: FilledButton.icon(
                         onPressed: () => Navigator.of(context).push(

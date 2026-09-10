@@ -38,6 +38,16 @@ class LazouTheme {
         brightness: Brightness.light,
       ),
       scaffoldBackgroundColor: LazouColors.background,
+      dividerTheme: const DividerThemeData(space: 1, thickness: 1, color: Color(0xFFECEFF3)),
+      snackBarTheme: SnackBarThemeData(behavior: SnackBarBehavior.floating, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))),
+      navigationBarTheme: NavigationBarThemeData(
+        height: 68,
+        elevation: 0,
+        backgroundColor: Colors.white,
+        indicatorColor: LazouColors.primary.withValues(alpha: .10),
+        labelTextStyle: const WidgetStatePropertyAll(TextStyle(fontSize: 11.5, fontWeight: FontWeight.w700)),
+        surfaceTintColor: Colors.transparent,
+      ),
       textTheme: textTheme,
       // Transitions fondu + léger zoom au lieu du slide Android brut par
       // défaut — un des détails qui donne un rendu "app premium" plutôt
@@ -64,7 +74,8 @@ class LazouTheme {
       ),
       cardTheme: CardThemeData(
         color: LazouColors.surface,
-        elevation: 1.5,
+        surfaceTintColor: Colors.transparent,
+        elevation: 0,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         margin: EdgeInsets.zero,
       ),
@@ -87,6 +98,7 @@ class LazouTheme {
       ),
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
+        floatingLabelBehavior: FloatingLabelBehavior.auto,
         fillColor: Colors.white,
         contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
         border: OutlineInputBorder(

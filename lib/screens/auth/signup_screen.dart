@@ -36,7 +36,10 @@ class _SignupScreenState extends State<SignupScreen> {
     if (erreur != null && mounted) {
       setState(() => _erreur = erreur);
     } else if (mounted) {
-      Navigator.of(context).pop(); // retour login -> redirection auto vers l'espace étudiant
+      // Créer un compte connecte automatiquement (Firebase) — il faut
+      // remonter jusqu'à la racine, pas juste d'un cran (sinon on retombe
+      // sur l'écran de connexion, lui-même encore poussé par-dessus l'app).
+      Navigator.of(context).popUntil((route) => route.isFirst);
     }
   }
 

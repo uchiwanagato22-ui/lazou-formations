@@ -6,6 +6,7 @@ import '../../models/student_profile.dart';
 import '../../services/auth_service.dart';
 import '../../services/firestore_service.dart';
 import '../../theme/app_theme.dart';
+import '../../widgets/premium_ui.dart';
 
 class MonPlanningScreen extends StatelessWidget {
   const MonPlanningScreen({super.key});
@@ -24,13 +25,8 @@ class MonPlanningScreen extends StatelessWidget {
       body: StreamBuilder<DocumentSnapshot<Map<String, dynamic>>>(
         stream: firestore.watchEtudiant(uid),
         builder: (context, profilSnap) {
-          if (profilSnap.hasError) {
-            return _ErreurDonnees(message: 'Impossible de charger ton profil. Vérifie ta connexion puis réessaie.');
-          }
+          if (profilSnap.hasError) return PremiumEmptyState(icon: Icons.cloud_off_outlined, title: 'Planning indisponible', message: 'Impossible de charger ton profil. Vérifie la connexion puis réessaie.', );
           if (!profilSnap.hasData) return const Center(child: CircularProgressIndicator());
-          if (!profilSnap.data!.exists) {
-            return const _ErreurDonnees(message: 'Ton profil étudiant n\'existe pas encore. Contacte l\'administration.');
-          }
           final student = StudentProfile.fromDoc(profilSnap.data!);
 
           if (student.groupeId == null || student.groupeId!.isEmpty) {
@@ -49,12 +45,10 @@ class MonPlanningScreen extends StatelessWidget {
           return StreamBuilder<FormationGroup?>(
             stream: firestore.watchGroupe(student.groupeId!),
             builder: (context, snap) {
-              if (snap.hasError) {
-                return const _ErreurDonnees(message: 'Impossible de charger le planning. Vérifie les autorisations Firestore.');
-              }
-              if (!snap.hasData) return const Center(child: CircularProgressIndicator());
+              if (snap.hasError) return PremiumEmptyState(icon: Icons.event_busy_outlined, title: 'Planning indisponible', message: 'Le groupe ou son planning n’a pas pu être chargé.', );
+              if (snap.connectionState == ConnectionState.waiting) return const Center(child: CircularProgressIndicator());
               final groupe = snap.data;
-              if (groupe == null) return const _ErreurDonnees(message: 'Groupe introuvable. Contacte l\'administration.');
+              if (groupe == null) return const PremiumEmptyState(icon: Icons.groups_outlined, title: 'Groupe introuvable', message: 'Ton groupe n’est plus disponible. Contacte l’administration si cela semble incorrect.');
 
               return Padding(
                 padding: const EdgeInsets.all(20),
@@ -106,29 +100,6 @@ class _LigneInfo extends StatelessWidget {
         leading: Icon(icon, color: LazouColors.primary),
         title: Text(label, style: const TextStyle(color: LazouColors.textSecondary, fontSize: 12)),
         subtitle: Text(valeur, style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 15)),
-      ),
-    );
-  }
-}
-
-
-class _ErreurDonnees extends StatelessWidget {
-  final String message;
-  const _ErreurDonnees({required this.message});
-
-  @override
-  Widget build(BuildContext context) {
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(28),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const Icon(Icons.cloud_off_outlined, size: 48, color: LazouColors.error),
-            const SizedBox(height: 12),
-            Text(message, textAlign: TextAlign.center),
-          ],
-        ),
       ),
     );
   }

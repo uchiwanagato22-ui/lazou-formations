@@ -2,9 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../services/auth_service.dart';
 import '../../theme/app_theme.dart';
+import '../../widgets/animations.dart';
 import 'signup_screen.dart';
 import 'staff_login_screen.dart';
-import '../student_space_screen.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -18,6 +18,7 @@ class _LoginScreenState extends State<LoginScreen> {
   final _email = TextEditingController();
   final _motDePasse = TextEditingController();
   String? _erreur;
+  bool _motDePasseVisible = false;
 
   @override
   void dispose() {
@@ -34,16 +35,13 @@ class _LoginScreenState extends State<LoginScreen> {
     if (!mounted) return;
     if (erreur != null) {
       setState(() => _erreur = erreur);
-      return;
+    } else {
+      // Succès : on referme cet écran (poussé par-dessus l'app) pour
+      // révéler le RootRouter en dessous, qui a déjà basculé sur le bon
+      // espace via authStateChanges() — sinon l'écran de connexion reste
+      // affiché indéfiniment malgré la connexion réussie.
+      Navigator.of(context).popUntil((route) => route.isFirst);
     }
-
-    // Le login peut être ouvert depuis l'onglet "Mon espace", donc le
-    // RootRouter n'est pas forcément dans la pile active. On remplace toute
-    // la pile pour éviter que l'utilisateur doive appuyer sur Retour.
-    Navigator.of(context).pushAndRemoveUntil(
-      MaterialPageRoute(builder: (_) => const StudentSpaceScreen()),
-      (_) => false,
-    );
   }
 
   Future<void> _seConnecterGoogle() async {
@@ -53,12 +51,9 @@ class _LoginScreenState extends State<LoginScreen> {
     if (!mounted) return;
     if (erreur != null) {
       setState(() => _erreur = erreur);
-      return;
+    } else {
+      Navigator.of(context).popUntil((route) => route.isFirst);
     }
-    Navigator.of(context).pushAndRemoveUntil(
-      MaterialPageRoute(builder: (_) => const StudentSpaceScreen()),
-      (_) => false,
-    );
   }
 
   @override
@@ -141,8 +136,16 @@ class _LoginScreenState extends State<LoginScreen> {
                               const SizedBox(height: 14),
                               TextFormField(
                                 controller: _motDePasse,
-                                decoration: const InputDecoration(labelText: 'Mot de passe', prefixIcon: Icon(Icons.lock_outline)),
-                                obscureText: true,
+                                decoration: InputDecoration(
+                                  labelText: 'Mot de passe',
+                                  prefixIcon: const Icon(Icons.lock_outline),
+                                  suffixIcon: IconButton(
+                                    tooltip: _motDePasseVisible ? 'Masquer le mot de passe' : 'Afficher le mot de passe',
+                                    onPressed: () => setState(() => _motDePasseVisible = !_motDePasseVisible),
+                                    icon: Icon(_motDePasseVisible ? Icons.visibility_off_outlined : Icons.visibility_outlined),
+                                  ),
+                                ),
+                                obscureText: !_motDePasseVisible,
                                 validator: (v) => (v == null || v.isEmpty) ? 'Champ requis' : null,
                               ),
                               if (_erreur != null) ...[
@@ -150,15 +153,17 @@ class _LoginScreenState extends State<LoginScreen> {
                                 Text(_erreur!, style: const TextStyle(color: LazouColors.error, fontSize: 13)),
                               ],
                               const SizedBox(height: 20),
-                              ElevatedButton(
-                                onPressed: auth.loading ? null : _seConnecter,
-                                child: auth.loading
-                                    ? const SizedBox(
-                                        height: 18,
-                                        width: 18,
-                                        child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
-                                      )
-                                    : const Text('Se connecter'),
+                              PressFeedback(
+                                child: ElevatedButton(
+                                  onPressed: auth.loading ? null : _seConnecter,
+                                  child: auth.loading
+                                      ? const SizedBox(
+                                          height: 18,
+                                          width: 18,
+                                          child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                                        )
+                                      : const Text('Se connecter'),
+                                ),
                               ),
                               const SizedBox(height: 14),
                               Row(
