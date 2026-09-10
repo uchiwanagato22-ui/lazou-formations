@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../theme/app_theme.dart';
+import 'animations.dart';
 
 class PremiumPageHeader extends StatelessWidget {
   final String title;
